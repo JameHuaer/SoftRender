@@ -181,10 +181,7 @@ typedef Vector<2> Vector2f;
 typedef Vector<3> Vector3f;
 typedef Vector<4> Vector4f;
 //向量叉乘
-Vector3f cross(const Vector3f& v1, const Vector3f& v2) {
-    return Vector<3>{v1.y() * v2.z() - v1.z() * v2.y(),
-                     v1.z() * v2.x() - v1.x() * v2.z(),
-                     v1.x() * v2.y() - v1.y() * v2.x()};
-}
+Vector3f Cross(const Vector3f& v1, const Vector3f& v2);
 }  // namespace Maths
+
 #endif

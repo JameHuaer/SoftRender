@@ -1,9 +1,13 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <iostream>
-
+#include <memory>
+// #include "softRender/Render.h"
+#include "softRender/math/MathUtil.h"
 #include "softRender/math/Matrix.h"
 #include "softRender/math/Vector.h"
+#include "softRender/model/model.h"
+#include "softRender/model/Vertex.h"
 using namespace Maths;
 
 HINSTANCE g_hInstance;  //实例句柄
@@ -16,6 +20,8 @@ int g_height = 600;
 //声明函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+std::shared_ptr<Model> m_model = std::make_shared<Model>();
+
 //主函数WinMain（）
 int WINAPI WinMain(_In_ HINSTANCE hInstance,
                    _In_opt_ HINSTANCE hPrevInstance,
@@ -23,6 +29,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
                    _In_ int nShowCmd) {
     //窗口类名
     TCHAR cls_name[] = TEXT("MyWinClass");
+
 
     //设计窗口类
     WNDCLASSEX wce = {0};
@@ -67,40 +74,78 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
 
     //显示，更新窗口
     ShowWindow(hWnd, nShowCmd);
-    UpdateWindow(hWnd);
-
-    //添加加速键表
-    HACCEL hAccel = NULL;
-    /*::LoadAccelerators(hInstance,MAKEINTRESOURCE(IDR_ACCELERATOR1);*/
+    // UpdateWindow(hWnd);
 
     //消息循环
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        if (!TranslateAccelerator(hWnd, hAccel,
-                                  &msg))  //有加速键表时用这,没有就不用
-        {
+    ZeroMemory(&msg, sizeof(msg));
+    while (msg.message != WM_QUIT) {
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+        } else {
+            m_model->Render();
+            InvalidateRect(hWnd, nullptr, true);
+            UpdateWindow(hWnd);
+            // todo
+            // update render;
+            // Render::update(hWnd);
         }
     }
-
-    return 0;
+    return msg.wParam;
 }
-
 //窗口消息处理函数
 LRESULT CALLBACK WindowProc(HWND hWnd,
                             UINT uMsg,
                             WPARAM wParam,
                             LPARAM lParam) {
+    PAINTSTRUCT ps;
+    HDC hdc;
+
+    //双缓冲绘图
+    static BITMAPINFO s_bitmapInfo;
+    static HDC s_hdcBackbuffer;  //后缓冲设备句柄
+    static HBITMAP s_hBitmap;
+    static HBITMAP s_hOldBitmap;
+    static void* s_pData;
+
     switch (uMsg) {
         case WM_CREATE: {
-            // test
-            Matrix<4, 4> a = Matrix<4, 4>::identity();
-            std::cout << a << std::endl;
+            m_model->init(g_width, g_height);
+            //模型初始化
+            //初始化设备无关位图header
+            BITMAPINFOHEADER bmphdr = {0};
+            bmphdr.biSize = sizeof(BITMAPINFOHEADER);
+            bmphdr.biWidth = g_width;
+            bmphdr.biHeight = -g_height;
+            bmphdr.biPlanes = 1;
+            bmphdr.biBitCount = 32;
+            bmphdr.biSizeImage = g_height * g_width * 4;
+            //创建后缓冲区
+            //先创建一个内存dc
+            s_hdcBackbuffer = CreateCompatibleDC(nullptr);
+            //获得前置缓冲区dc
+            HDC hdc = GetDC(hWnd);
 
-            //渲染初始化
+            s_hBitmap = CreateDIBSection(
+                nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
+                reinterpret_cast<void**>(
+                    &m_model->GetFrameImage()->GetFrameBuffer()),
+                nullptr, 0);
+            // g_depthBuff.reset(new float[g_width * g_height]);
+            //将bitmap装入内存dc
+            s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
+            //释放dc
+            ReleaseDC(hWnd, hdc);
+            //初始化
+            // Render::initRenderer(g_width, g_height, hWnd);
         } break;
         case WM_PAINT: {
+            hdc = BeginPaint(hWnd, &ps);
+            //把backbuffer内容传到frontbuffer
+            BitBlt(ps.hdc, 0, 0, g_width, g_height, s_hdcBackbuffer, 0, 0,
+                   SRCCOPY);
+            EndPaint(hWnd, &ps);
         } break;
         case WM_ERASEBKGND:
             return true;
@@ -128,6 +173,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
             break;
 
         case WM_DESTROY:
+            SelectObject(s_hdcBackbuffer, s_hOldBitmap);
+            DeleteDC(s_hdcBackbuffer);
+            DeleteObject(s_hOldBitmap);
             PostQuitMessage(0);
             break;
 
