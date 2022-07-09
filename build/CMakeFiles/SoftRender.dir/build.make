@@ -72,15 +72,15 @@ CMakeFiles/SoftRender.dir/main.cpp.obj: CMakeFiles/SoftRender.dir/flags.make
 CMakeFiles/SoftRender.dir/main.cpp.obj: E:/Learning/MyRender/SoftRender/main.cpp
 CMakeFiles/SoftRender.dir/main.cpp.obj: CMakeFiles/SoftRender.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Learning\MyRender\SoftRender\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/SoftRender.dir/main.cpp.obj"
-	E:\softwares\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/SoftRender.dir/main.cpp.obj -MF CMakeFiles\SoftRender.dir\main.cpp.obj.d -o CMakeFiles\SoftRender.dir\main.cpp.obj -c E:\Learning\MyRender\SoftRender\main.cpp
+	E:\softwares\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/SoftRender.dir/main.cpp.obj -MF CMakeFiles\SoftRender.dir\main.cpp.obj.d -o CMakeFiles\SoftRender.dir\main.cpp.obj -c E:\Learning\MyRender\SoftRender\main.cpp
 
 CMakeFiles/SoftRender.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/SoftRender.dir/main.cpp.i"
-	E:\softwares\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E E:\Learning\MyRender\SoftRender\main.cpp > CMakeFiles\SoftRender.dir\main.cpp.i
+	E:\softwares\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E E:\Learning\MyRender\SoftRender\main.cpp > CMakeFiles\SoftRender.dir\main.cpp.i
 
 CMakeFiles/SoftRender.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/SoftRender.dir/main.cpp.s"
-	E:\softwares\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S E:\Learning\MyRender\SoftRender\main.cpp -o CMakeFiles\SoftRender.dir\main.cpp.s
+	E:\softwares\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S E:\Learning\MyRender\SoftRender\main.cpp -o CMakeFiles\SoftRender.dir\main.cpp.s
 
 # Object files for target SoftRender
 SoftRender_OBJECTS = \
