@@ -4,36 +4,42 @@
 #include "../math/Matrix.h"
 #include "../math/Vector.h"
 #include "FrameImage.h"
+#include "GeometryGenerator.h"
+#include "ModelDraw.h"
+#include "ShaderModel.h"
+#include <windows.h>
+// #include <windowsx.h>
+#include "Camera.h"
+namespace ModelSpace {
+#define PI 3.1415926f
 class Model {
-   public:
-    Model();
+public:
+    Model(int w, int h);
     ~Model();
-    void init(int w, int h);
-    void Render();
-    FrameImage*& GetFrameImage() { return frame_image; }
+    void Render(); //渲染
+    void Update(); //更新数据
+    FrameImage *&GetFrameImage();
 
-   private:
-    FrameImage* frame_image;
+private:
+    int width;
+    int height;
+
+    //摄像机旋转
+    float theta;
+    float alpha;
+    float radius;
+    POINT last_mouse_position; //鼠标最后点击的坐标
+
+    // Maths::Matrix4f world_view_projection;  //世界视角投影矩阵
+    // Maths::Matrix4f world_matrix;           //世界矩阵
+    // Maths::Matrix4f world_invert_transpose; //世界矩阵的逆的转置，用于调整法线
+    FrameImage *frame_image;   //帧图片指针
+    ModelDraw *model_draw;     //模型绘制
+    ShaderModel *shader_model; //着色器
+    MeshData mesh_data;        //网格数据
+    Camera *camera;
 };
-void Model::init(int w, int h) {
-    frame_image = new FrameImage(w, h);
-}
-void Model::Render() {
-    //清空后缓冲图片
-    frame_image->ClearBuffer(Maths::Vector4f(192, 192, 192));
 
-    //设置渲染状态
-    // m_pImmediateContext->SetRenderMode(TINY3D_FILL_SOLIDE);
-    //设置着色器变量
-    // m_pShader->SetWorldViewProj(m_worldViewProj);
-    // m_pShader->SetWorld(m_world);
-    // m_pShader->SetWorldInvTranspose(m_worldInvTranspose);
+}
 
-    // m_pImmediateContext->DrawIndexed(m_indices.size(), 0, 0);
-}
-Model::Model() {}
-Model::~Model() {
-    if (frame_image)
-        delete frame_image;
-}
 #endif
