@@ -61,3 +61,15 @@ Maths::Matrix4f Camera::GetWITMatrix() {
 PerspectiveArg Camera::GetFovAspectRadioNearFar() {
     return perspective_arg;
 }
+CameraControlData Camera::GetCameraControlData() {
+    return camera_control;
+}
+void Camera::SetCameraControlData(const CameraControlData &ccd) {
+    camera_control = ccd;
+}
+void Camera::SetTarget(const Maths::Vector4f &tar) {
+    target = tar;
+}
+Maths::Vector4f Camera::GetTarget() {
+    return target;
+}

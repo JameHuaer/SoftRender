@@ -8,9 +8,9 @@ unsigned int MathUtil::RGBToUint(Maths::Vector4f color) {
     return (uint32_t)(r << 16 | g << 8 | b);
 }
 unsigned int MathUtil::RGBToUint(float r,
-                       float g,
-                       float b,
-                       float a) {
+                                 float g,
+                                 float b,
+                                 float a) {
     uint32_t r255 = r * 255;
     uint32_t g255 = g * 255;
     uint32_t b255 = b * 255;
@@ -47,4 +47,13 @@ Maths::Vector2f MathUtil::Lerp(const Maths::Vector2f &v1, const Maths::Vector2f 
 Maths::Vector3f MathUtil::Lerp(const Maths::Vector3f &v1, const Maths::Vector3f &v2, float t) {
     return Maths::Vector3f{
         Lerp(v1.x(), v2.x(), t), Lerp(v1.y(), v2.y(), t), Lerp(v1.z(), v2.z(), t)};
+}
+float MathUtil::AngleToRadians(float angle) {
+    return (angle / 180.0f) * PI;
+}
+float MathUtil::RadiansToAngle(float radians) {
+    return (radians / PI) * 180.0f;
+}
+float MathUtil::Clamp(float x, float min, float max) {
+    return x <= min ? min:(x >= max ? max : x);
 }

@@ -2,11 +2,12 @@
 void ModelSpace::GeometryGenerator::CreateBox(float width, float height, float depth, MeshData &mesh) {
     mesh.vertices.clear();
     mesh.indices.clear();
-
+    int vertes_size = 24;
+    int index_size = 36;
     //一共24个顶点(每面4个)
-    mesh.vertices.resize(24);
+    mesh.vertices.resize(vertes_size);
     //一共36个索引(每面6个)
-    mesh.indices.resize(36);
+    mesh.indices.resize(index_size);
 
     float halfW = width * 0.5f;
     float halfH = height * 0.5f;
@@ -118,7 +119,7 @@ void ModelSpace::GeometryGenerator::CreateBox(float width, float height, float d
     mesh.vertices[23].texcoord = Maths::Vector2f(1.f, 1.f);
 
     //构建索引
-    for (int i = 0, j = 0; i < 21; i += 6, j += 4) {
+    for (int i = 0, j = 0; i < index_size ; i += 6, j += 4) {
         mesh.indices[i] = j;
         mesh.indices[i + 1] = j + 1;
         mesh.indices[i + 2] = j + 2;

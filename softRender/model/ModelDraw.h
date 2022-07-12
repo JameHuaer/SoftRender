@@ -24,6 +24,8 @@ public:
     void SetFillMode(ModelFillMode mode);
     void Draw(uint32_t index_count, uint32_t start_index, uint32_t start_vertex);
     MeshData &GetMeshData();
+    FrameImage *&GetFrameImage();
+    void Resize(int new_width, int new_height);
 
 private:
     //转到CVV空间
@@ -32,14 +34,12 @@ private:
     VertexShadeOut TransformToProjection(const VertexPrimitive &v);
     void TransformToScreen(VertexShadeOut &v);
     bool IsBackFaceCulling(const VertexPrimitive &v1, const VertexPrimitive &v2, const VertexPrimitive &v3);
-    void BresenhamDrawLine(int x1, int y1, int x2, int y2);
+    void BresenhamDrawLine(int x0, int y0, int x1, int y1);
     void ScanLineFill(const VertexShadeOut &left, const VertexShadeOut &right, int y_index);
     void DrawTriangle(const VertexShadeOut &v1, const VertexShadeOut &v2, const VertexShadeOut &v3);
     void DrawTriangleTop(const VertexShadeOut &v1, const VertexShadeOut &v2, const VertexShadeOut &v3);
     void DrawTriangleBottom(const VertexShadeOut &v1, const VertexShadeOut &v2, const VertexShadeOut &v3);
     void TriangleRasterization(const VertexShadeOut &v1, const VertexShadeOut &v2, const VertexShadeOut &v3);
-    int width;
-    int height;
 
     FrameImage *frame_image; //帧图片
     ModelFillMode fill_mode;

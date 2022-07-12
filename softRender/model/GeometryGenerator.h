@@ -16,7 +16,7 @@ namespace ModelSpace {
             static GeometryGenerator instace;
             return &instace;
         }
-        void CreateBox(float width, float height, float depth, MeshData &mesh); // todo implement
+        void CreateBox(float width, float height, float depth, MeshData &mesh); 
         void LoadOBJModel(const std::string &obj_file_Name, MeshData &mesh);    // todod implement
 
     private:

@@ -2,6 +2,4 @@ build
 .vscode
 softRender/Render.h
 softRender/Render.cpp
-softRender/Camera.h
-softRender/Camera.cpp
 softRender/MyRender.h

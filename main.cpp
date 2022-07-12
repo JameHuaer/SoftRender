@@ -9,6 +9,7 @@
 #include "softRender/model/GeometryGenerator.h"
 #include "softRender/model/Model.h"
 #include "softRender/model/Vertex.h"
+#include "softRender/platforms/Win32.h"
 using namespace Maths;
 // D3D坐标系，行优先
 //软光栅过程：读取模型数据或者创建模型数据（包括顶点坐标、纹理坐标、法向量、颜色）->
@@ -18,10 +19,10 @@ using namespace Maths;
 HINSTANCE g_hInstance; //实例句柄
 static HWND g_hWnd;    //窗口句柄
 
-static const wchar_t *const g_title = L"TinyD3D"; //窗口标题
-int g_width = 800;                                //窗口大小
+static const wchar_t *const g_title = L"SoftRender"; //窗口标题
+int g_width = 800;                                   //窗口大小
 int g_height = 600;
-
+bool isResizing = false;
 //声明函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -60,7 +61,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     //创建窗口
     HWND hWnd = CreateWindowEx(WS_EX_APPWINDOW,     //窗口的扩展样式
                                cls_name,            //窗口类名
-                               TEXT("MyRender"),    //窗口标题
+                               TEXT("SoftRender"),    //窗口标题
                                WS_OVERLAPPEDWINDOW, //窗口风格样式
                                CW_USEDEFAULT, CW_USEDEFAULT, g_width,
                                g_height,    //窗口x,y,宽度,高度
@@ -100,10 +101,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     return msg.wParam;
 }
 //窗口消息处理函数
-LRESULT CALLBACK WindowProc(HWND hWnd,
-                            UINT uMsg,
-                            WPARAM wParam,
-                            LPARAM lParam) {
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     PAINTSTRUCT ps;
     HDC hdc;
 
@@ -131,18 +129,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
         //获得前置缓冲区dc
         HDC hdc = GetDC(hWnd);
 
-        s_hBitmap = CreateDIBSection(
-            nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
-            reinterpret_cast<void **>(
-                &m_model->GetFrameImage()->GetFrameBuffer()),
-            nullptr, 0);
-        // g_depthBuff.reset(new float[g_width * g_height]);
+        s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
+                                     reinterpret_cast<void **>(&m_model->GetFrameBuffer()), nullptr, 0);
+
         //将bitmap装入内存dc
         s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
         //释放dc
         ReleaseDC(hWnd, hdc);
-        //初始化
-        // Render::initRenderer(g_width, g_height, hWnd);
     } break;
     case WM_PAINT: {
         hdc = BeginPaint(hWnd, &ps);
@@ -153,24 +146,54 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
     } break;
     case WM_ERASEBKGND:
         return true;
+    case WM_ACTIVATE:
+
         break;
-    //鼠标事件
-    //鼠标按下事件
+        //鼠标事件
+        //鼠标按下事件
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
     case WM_MBUTTONDOWN:
-        printf("button up: x: %d u: %d\n", GET_X_LPARAM(lParam),
-               GET_Y_LPARAM(lParam)); // test
+        //如果g_width != width && g_height != height;那么就调整渲染窗口
+        if (g_width != m_model->GetWidth() && g_height != m_model->GetHeight()) {
+            //模型初始化
+            //初始化设备无关位图header
+            BITMAPINFOHEADER bmphdr = {0};
+            bmphdr.biSize = sizeof(BITMAPINFOHEADER);
+            bmphdr.biWidth = g_width;
+            bmphdr.biHeight = -g_height;
+            bmphdr.biPlanes = 1;
+            bmphdr.biBitCount = 32;
+            bmphdr.biSizeImage = g_height * g_width * 4;
+            // delete m_model->GetFrameBuffer();
+            s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
+                                         reinterpret_cast<void **>(&m_model->GetFrameBuffer()), nullptr, 0);
+            //将bitmap装入内存dc
+            s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
+            m_model->Resize(g_width, g_height);
+        }
+        m_model->GetPlatform()->OnMouseDown(wParam, hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
-    //鼠标释放事件
+        //鼠标释放事件
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
-        printf("button down: x: %d u: %d\n", GET_X_LPARAM(lParam),
-               GET_Y_LPARAM(lParam)); // test
+        m_model->GetPlatform()->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
-    //鼠标移动事件
+        //鼠标移动事件
     case WM_MOUSEMOVE:
+        m_model->GetPlatform()->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        return 0;
+    case WM_MOUSEWHEEL:
+        m_model->GetPlatform()->OnScrollMove(wParam, GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
+        return 0;
+    case WM_SIZE:
+        // printf("button down: w: %d h: %d\n", g_width, g_height); // test
+        g_width = LOWORD(lParam);
+        g_height = HIWORD(lParam);
+        // TODO
+        //调整窗口大小，在结束调整后同步渲染。
+        //目前设计为：当缩放结束后并不会立刻渲染，而是将鼠标指针移动到窗口内点击一下之后才会。
         return 0;
     case WM_CLOSE:
         DestroyWindow(hWnd);
@@ -184,6 +207,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd,
         break;
 
     default:
+
         break;
     }
 

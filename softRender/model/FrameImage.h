@@ -19,6 +19,9 @@ public:
     void SetDepth(int x, int y, float z);
     int GetWidth();
     int GetHeight();
+    void Resize(int new_width, int new_height);
+
+    static const Maths::Vector4f kGray;
 
 private:
     int width;              //图片宽

@@ -101,7 +101,8 @@ template <int nrows, int ncols>
 Vector<nrows> operator*(const Vector<ncols> &lhs, const Matrix<nrows, ncols> &rhs) {
     Vector<nrows> result;
     for (int i = 0; i < nrows; ++i) {
-        result[i] = rhs.GetColumn(i) * lhs;
+        // result[i] = rhs.GetColumn(i) * lhs;
+        result[i] = lhs * rhs.GetColumn(i);
     }
     return result;
 }
