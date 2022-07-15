@@ -1,16 +1,10 @@
+#include "core/Rasterizer.h"
+#include "math/Matrix.h"
 #include <iostream>
 #include <memory>
 #include <windows.h>
 #include <windowsx.h>
-// #include "softRender/Render.h"
-#include "softRender/math/MathUtil.h"
-#include "softRender/math/Matrix.h"
-#include "softRender/math/Vector.h"
-#include "softRender/model/GeometryGenerator.h"
-#include "softRender/model/Model.h"
-#include "softRender/model/Vertex.h"
-#include "softRender/platforms/Win32.h"
-using namespace Maths;
+// using namespace Maths;
 // D3D坐标系，行优先
 //软光栅过程：读取模型数据或者创建模型数据（包括顶点坐标、纹理坐标、法向量、颜色）->
 //计算world view projection矩阵，将模型坐标转化为屏幕坐标->
@@ -26,7 +20,7 @@ bool isResizing = false;
 //声明函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-std::shared_ptr<ModelSpace::Model> m_model = std::make_shared<ModelSpace::Model>(g_width, g_height);
+std::shared_ptr<rst::rasterizer> raster = std::make_shared<rst::rasterizer>(g_width, g_height);
 
 //主函数WinMain（）
 int WINAPI WinMain(_In_ HINSTANCE hInstance,
@@ -61,7 +55,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     //创建窗口
     HWND hWnd = CreateWindowEx(WS_EX_APPWINDOW,     //窗口的扩展样式
                                cls_name,            //窗口类名
-                               TEXT("SoftRender"),    //窗口标题
+                               TEXT("SoftRender"),  //窗口标题
                                WS_OVERLAPPEDWINDOW, //窗口风格样式
                                CW_USEDEFAULT, CW_USEDEFAULT, g_width,
                                g_height,    //窗口x,y,宽度,高度
@@ -89,8 +83,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         } else {
-            m_model->Update();
-            m_model->Render();
+            raster->Update();
+            raster->Render();
             InvalidateRect(hWnd, nullptr, true);
             UpdateWindow(hWnd);
             // todo
@@ -130,7 +124,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         HDC hdc = GetDC(hWnd);
 
         s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
-                                     reinterpret_cast<void **>(&m_model->GetFrameBuffer()), nullptr, 0);
+                                     reinterpret_cast<void **>(&raster->GetFrameBuffer()), nullptr, 0);
 
         //将bitmap装入内存dc
         s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
@@ -154,8 +148,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
     case WM_MBUTTONDOWN:
+        // printf("button down: x: %d y: %d\n", GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)); // test
+
         //如果g_width != width && g_height != height;那么就调整渲染窗口
-        if (g_width != m_model->GetWidth() && g_height != m_model->GetHeight()) {
+        if (g_width != raster->width && g_height != raster->height) {
             //模型初始化
             //初始化设备无关位图header
             BITMAPINFOHEADER bmphdr = {0};
@@ -167,25 +163,26 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             bmphdr.biSizeImage = g_height * g_width * 4;
             // delete m_model->GetFrameBuffer();
             s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
-                                         reinterpret_cast<void **>(&m_model->GetFrameBuffer()), nullptr, 0);
+                                         reinterpret_cast<void **>(&raster->GetFrameBuffer()), nullptr, 0);
             //将bitmap装入内存dc
             s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
-            m_model->Resize(g_width, g_height);
+            raster->Resize(g_width, g_height);
         }
-        m_model->GetPlatform()->OnMouseDown(wParam, hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        raster->win32_platform_->OnMouseDown(wParam, hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
         //鼠标释放事件
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
-        m_model->GetPlatform()->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        raster->win32_platform_->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
         //鼠标移动事件
     case WM_MOUSEMOVE:
-        m_model->GetPlatform()->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        raster->win32_platform_->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+
         return 0;
     case WM_MOUSEWHEEL:
-        m_model->GetPlatform()->OnScrollMove(wParam, GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
+        raster->win32_platform_->OnScrollMove(wParam, GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
         return 0;
     case WM_SIZE:
         // printf("button down: w: %d h: %d\n", g_width, g_height); // test

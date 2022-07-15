@@ -1,5 +1,2 @@
 build 
 .vscode
-softRender/Render.h
-softRender/Render.cpp
-softRender/MyRender.h

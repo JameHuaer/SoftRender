@@ -1,13 +1,12 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(SoftRender VERSION 0.1.0)
-
+set(CMAKE_CXX_STANDARD 17)
 include(CTest)
 enable_testing()
-add_executable(SoftRender main.cpp softRender/math/Vector.h softRender/math/Vector.cpp softRender/math/MathUtil.h softRender/math/MathUtil.cpp 
-softRender/model/Model.h  softRender/model/Model.cpp softRender/model/GeometryGenerator.h  softRender/model/GeometryGenerator.cpp
-softRender/model/FrameImage.cpp softRender/model/FrameImage.h softRender/model/Camera.cpp softRender/model/Camera.h
-softRender/model/ModelDraw.cpp softRender/model/ModelDraw.h softRender/model/ShaderModel.cpp softRender/model/ShaderModel.h
-softRender/platforms/Win32.cpp softRender/platforms/Win32.h)#softRender/Render.h softRender/Render.cpp)
+add_executable(SoftRender main.cpp math/Vector.h math/Vector.cpp math/Matrix.h math/Matrix.cpp core/Triangle.h core/Triangle.cpp
+core/Texture.h core/Texture.cpp core/Shader.h core/Shader.cpp core/Global.h core/Rasterizer.h core/Rasterizer.cpp core/Camera.h core/Camera.cpp
+math/MathUtil.h math/MathUtil.cpp core/FrameImage.h core/FrameImage.cpp core/ObjLoader.h core/ObjLoader.cpp
+platforms/Win32.h platforms/Win32.cpp)#softRender/Render.h softRender/Render.cpp)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
