@@ -65,8 +65,6 @@ Maths::Matrix4f Camera::get_model_matrix() {
 }
 
 Maths::Matrix4f Camera::get_projection_matrix() {
-    // TODO: Use the same projection matrix from the previous assignments
-    // Students will implement this function
 
     Maths::Matrix4f projection = Maths::Matrix4f::Identity();
     Maths::Matrix4f persp_to_ortho;
@@ -97,9 +95,7 @@ Maths::Matrix4f Camera::get_projection_matrix() {
     auto test3 = test2 * projection;
     projection = m_ortho_scale * m_ortho_trans * persp_to_ortho * projection;
 
-    // TODO: Implement this function
-    // Create the projection matrix for the given parameters.
-    // Then return it.
+
     projection_ = projection;
     return projection;
 }

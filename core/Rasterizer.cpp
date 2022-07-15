@@ -9,77 +9,38 @@
 
 // Bresenham's line drawing algorithm
 void rst::rasterizer::draw_line(Maths::Vector3f begin, Maths::Vector3f end) {
-    auto x1 = begin.x;
-    auto y1 = begin.y;
-    auto x2 = end.x;
-    auto y2 = end.y;
+    auto x0 = begin.x;
+    auto y0 = begin.y;
+    auto x1 = end.x;
+    auto y1 = end.y;
 
-    Maths::Vector3f line_color = {255, 255, 255};
+    Maths::Vector3f line_color = {0.15, 0.15, 0.15};
 
-    int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
-
-    dx = x2 - x1;
-    dy = y2 - y1;
-    dx1 = fabs(dx);
-    dy1 = fabs(dy);
-    px = 2 * dy1 - dx1;
-    py = 2 * dx1 - dy1;
-
-    if (dy1 <= dx1) {
-        if (dx >= 0) {
-            x = x1;
-            y = y1;
-            xe = x2;
+    bool steep = false;
+    if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+        steep = true;
+    }
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int derror2 = std::abs(dy) * 2;
+    int error2 = 0;
+    int y = y0;
+    for (int x = x0; x <= x1; x++) {
+        if (steep) {
+            frame_image_->DrawPixel(y, height - x, MathUtil::RGBToUint(line_color));
         } else {
-            x = x2;
-            y = y2;
-            xe = x1;
+            frame_image_->DrawPixel(x, height - y, MathUtil::RGBToUint(line_color));
         }
-        Maths::Vector2i point = Maths::Vector2i(x, y);
-        frame_image_->DrawPixel(point.u, point.v, MathUtil::RGBToUint(line_color));
-        for (i = 0; x < xe; i++) {
-            x = x + 1;
-            if (px < 0) {
-                px = px + 2 * dy1;
-            } else {
-                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0)) {
-                    y = y + 1;
-                } else {
-                    y = y - 1;
-                }
-                px = px + 2 * (dy1 - dx1);
-            }
-            //            delay(0);
-            Maths::Vector2i point = Maths::Vector2i(x, y);
-            frame_image_->DrawPixel(point.u, point.v, MathUtil::RGBToUint(line_color));
-        }
-    } else {
-        if (dy >= 0) {
-            x = x1;
-            y = y1;
-            ye = y2;
-        } else {
-            x = x2;
-            y = y2;
-            ye = y1;
-        }
-        Maths::Vector2i point = Maths::Vector2i(x, y);
-        frame_image_->DrawPixel(point.u, point.v, MathUtil::RGBToUint(line_color));
-        for (i = 0; y < ye; i++) {
-            y = y + 1;
-            if (py <= 0) {
-                py = py + 2 * dx1;
-            } else {
-                if ((dx < 0 && dy < 0) || (dx > 0 && dy > 0)) {
-                    x = x + 1;
-                } else {
-                    x = x - 1;
-                }
-                py = py + 2 * (dx1 - dy1);
-            }
-            //            delay(0);
-            Maths::Vector2i point = Maths::Vector2i(x, y);
-            frame_image_->DrawPixel(point.u, point.v, MathUtil::RGBToUint(line_color));
+        error2 += derror2;
+        if (error2 > dx) {
+            y += (y1 > y0 ? 1 : -1);
+            error2 -= dx * 2;
         }
     }
 }
@@ -167,16 +128,15 @@ void rst::rasterizer::draw() {
         newtri.setColor(1, 148, 121.0, 92.0);
         newtri.setColor(2, 148, 121.0, 92.0);
 
-        fill_mode = kSolide;
+        fill_mode = kWireFrame;
+
         switch (fill_mode) {
         case kWireFrame:
-            // BresenhamDrawLine(v1.view_projection.x(), v1.view_projection.y(), v2.view_projection.x(), v2.view_projection.y()); //
-            // BresenhamDrawLine(v1.view_projection.x(), v1.view_projection.y(), v3.view_projection.x(), v3.view_projection.y()); //上面
-            // BresenhamDrawLine(v2.view_projection.x(), v2.view_projection.y(), v3.view_projection.x(), v3.view_projection.y()); //下面
+            draw_line(newtri.v[0].head3(), newtri.v[1].head3());
+            draw_line(newtri.v[0].head3(), newtri.v[2].head3());
+            draw_line(newtri.v[1].head3(), newtri.v[2].head3());
             break;
         case kSolide:
-            // RasterizeTriangle(v1, v2, v3, view_pos);
-            // drawPrimitiveScanLine(v1, v2, v3);
             rasterize_triangle(newtri, viewspace_pos);
             break;
         default:
@@ -217,8 +177,10 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t, const std::array<Mat
     for (int x = lmin; x < rmax; ++x) {
         for (int y = bmin; y < tmax; ++y) {
             int id = frame_image_->GetIndex(x, y);
-            if (id < 0 || id>width * height || x >= width || x < 0 || y >= height || y < 0)//上下左右越界的不进行着色，缩放超出屏幕也不进行着色
+            //上下左右越界的不进行着色，缩放超出屏幕也不进行着色
+            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
                 continue;
+
             if (insideTriangle(x, y, t.v)) {
                 std::tie(alpha, beta, gamma) = computeBarycentric2D(x, y, t.v);
                 float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
