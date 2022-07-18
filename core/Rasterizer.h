@@ -61,21 +61,25 @@ public:
 
     void Update();
     void Render();
-
+    //窗口尺寸变化时resize
     void Resize(int w, int h);
-
+    //背面剔除
     bool IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs);
-
+    //简单CVV裁剪
     bool IsClipSimple(const Triangle &t);
+    //CohenSutherLand多边形裁剪
     void IsCohenSutherLandClip(const Triangle &tri, std::vector<Triangle> &res);
+    //多边形裁剪获得与正方体焦点
     void GetCrossVertex(const Triangle &t, std::vector<VertexData> &v_out);
+    //计算三角形顶点在正方体哪侧
     int ComputeOutCode(double x, double y, double z, double w);
+    //插值新点，并push到点集中
     void LerpAndPushVertex(const Triangle &tri, const Maths::Vector3f &v, std::vector<VertexData> &res);
 
 public:
     int width, height;
     PlatForms::Win32Platform *win32_platform_;
-    ModelFillMode fill_mode;
+    ModelFillMode fill_mode;//填充模式
 
 private:
     void DrawLine(Maths::Vector3f begin, Maths::Vector3f end);
