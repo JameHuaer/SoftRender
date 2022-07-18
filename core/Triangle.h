@@ -17,7 +17,6 @@ public:
 
     Texture2D *tex = nullptr;
     Triangle();
-
     Maths::Vector4f a() const {
         return v[0];
     }
@@ -32,9 +31,11 @@ public:
     void setNormal(int ind, Maths::Vector3f n);        /*set i-th vertex normal vector*/
     void setColor(int ind, float r, float g, float b); /*set i-th vertex color*/
 
+    void setVertexes(const std::array<Maths::Vector4f, 3> &vertexes);
     void setNormals(const std::array<Maths::Vector3f, 3> &normals);
     void setColors(const std::array<Maths::Vector3f, 3> &colors);
     void setTexCoord(int ind, Maths::Vector2f uv); /*set i-th vertex texture coordinate*/
+    void setTexCoords(const std::array<Maths::Vector2f, 3> &t);
     std::array<Maths::Vector4f, 3> toVector4() const;
 };
 

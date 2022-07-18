@@ -5,12 +5,12 @@
 #include "../math/Vector.h"
 #include "Texture.h"
 #include <vector>
-struct fragment_shader_payload {
-    fragment_shader_payload() {
+struct FragmentShaderPayload {
+    FragmentShaderPayload() {
         texture = nullptr;
     }
 
-    fragment_shader_payload(const Maths::Vector3f &col, const Maths::Vector3f &nor, const Maths::Vector2f &tc, Texture2D *tex)
+    FragmentShaderPayload(const Maths::Vector3f &col, const Maths::Vector3f &nor, const Maths::Vector2f &tc, Texture2D *tex)
         : color(col), normal(nor), tex_coords(tc), texture(tex) {
     }
 
@@ -21,23 +21,23 @@ struct fragment_shader_payload {
     Texture2D *texture;
 };
 
-struct vertex_shader_payload {
+struct VertexShaderPayload {
     Maths::Vector3f position;
 };
-struct light {
+struct Light {
     Maths::Vector3f position;
     Maths::Vector3f intensity;
 };
 
-Maths::Vector3f vertex_shader(const vertex_shader_payload &payload);
+Maths::Vector3f VertexShader(const VertexShaderPayload &payload);
 
-Maths::Vector3f normal_fragment_shader(const fragment_shader_payload &payload);
+Maths::Vector3f NormalFragmentShader(const FragmentShaderPayload &payload);
 
-static Maths::Vector3f reflect(const Maths::Vector3f &vec, const Maths::Vector3f &axis);
+static Maths::Vector3f Reflect(const Maths::Vector3f &vec, const Maths::Vector3f &axis);
 
-Maths::Vector3f texture_fragment_shader(const fragment_shader_payload &payload);
-Maths::Vector3f phong_fragment_shader(const fragment_shader_payload &payload);
-Maths::Vector3f displacement_fragment_shader(const fragment_shader_payload &payload);
-Maths::Vector3f bump_fragment_shader(const fragment_shader_payload &payload);
+Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload);
+Maths::Vector3f PhongFragmentShader(const FragmentShaderPayload &payload);
+Maths::Vector3f DisplacementFragmentShader(const FragmentShaderPayload &payload);
+Maths::Vector3f BumpFragmentShader(const FragmentShaderPayload &payload);
 
 #endif // RASTERIZER_SHADER_H

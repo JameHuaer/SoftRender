@@ -20,7 +20,7 @@ bool isResizing = false;
 //声明函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-std::shared_ptr<rst::rasterizer> raster = std::make_shared<rst::rasterizer>(g_width, g_height);
+std::shared_ptr<rst::Rasterizer> raster = std::make_shared<rst::Rasterizer>(g_width, g_height);
 
 //主函数WinMain（）
 int WINAPI WinMain(_In_ HINSTANCE hInstance,

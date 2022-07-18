@@ -13,6 +13,7 @@
 #include <map>
 #include <optional>
 #include <vector>
+
 namespace rst {
 
 //模型填充模式
@@ -20,11 +21,21 @@ enum ModelFillMode {
     kWireFrame, //线框模式
     kSolide
 };
+//多边形裁剪，判断与点在立方体哪里
+enum ClipOutCode {
+    kInside = 0,
+    kTop = 0x01,
+    kBottom = 0x02,
+    kLeft = 0x04,
+    kRight = 0x08,
+    kNear = 0x10,
+    kFar = 0x20,
+};
 
-class rasterizer {
+class Rasterizer {
 public:
-    rasterizer(int w, int h);
-    ~rasterizer() {
+    Rasterizer(int w, int h);
+    ~Rasterizer() {
         if (frame_image_)
             delete frame_image_;
         for (int i = 0; i < triangle_list_.size(); ++i) {
@@ -35,29 +46,31 @@ public:
             delete camera_;
     }
 
-    void set_model(const Maths::Matrix4f &m);
-    void set_view(const Maths::Matrix4f &v);
-    void set_projection(const Maths::Matrix4f &p);
+    void SetModel(const Maths::Matrix4f &m);
+    void SetView(const Maths::Matrix4f &v);
+    void SetProjection(const Maths::Matrix4f &p);
 
-    void set_texture(Texture2D tex) {
-        texture = tex;
-    }
+    void SetTexture(Texture2D tex);
 
-    void set_vertex_shader(std::function<Maths::Vector3f(vertex_shader_payload)> vert_shader);
-    void set_fragment_shader(std::function<Maths::Vector3f(fragment_shader_payload)> frag_shader);
+    void SetVertexShader(std::function<Maths::Vector3f(VertexShaderPayload)> vert_shader);
+    void SetFragmentShader(std::function<Maths::Vector3f(FragmentShaderPayload)> frag_shader);
 
-    // void set_pixel(const Maths::Vector2i &point, const Maths::Vector3f &color);
-    void draw();
+    uint32_t *&GetFrameBuffer();
 
-    // std::vector<Maths::Vector3f> &frame_buffer() {
-    //     return frame_buf;
-    // }
-    uint32_t *&GetFrameBuffer() {
-        return frame_image_->GetFrameBuffer();
-    }
+    void Draw();
+
     void Update();
     void Render();
+
     void Resize(int w, int h);
+
+    bool IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs);
+
+    bool IsClipSimple(const Triangle &t);
+    void IsCohenSutherLandClip(const Triangle &tri, std::vector<Triangle> &res);
+    void GetCrossVertex(const Triangle &t, std::vector<VertexData> &v_out);
+    int ComputeOutCode(double x, double y, double z, double w);
+    void LerpAndPushVertex(const Triangle &tri, const Maths::Vector3f &v, std::vector<VertexData> &res);
 
 public:
     int width, height;
@@ -65,12 +78,12 @@ public:
     ModelFillMode fill_mode;
 
 private:
-    void draw_line(Maths::Vector3f begin, Maths::Vector3f end);
+    void DrawLine(Maths::Vector3f begin, Maths::Vector3f end);
 
-    void rasterize_triangle(const Triangle &t, const std::array<Maths::Vector3f, 3> &world_pos);
+    void RasterizeTriangle(const Triangle &t, const std::array<Maths::Vector3f, 3> &world_pos);
 
     // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER
-
+    //顶点着色 -> mvp变换 -> 剔除/裁剪 -> 透视除法 -> 视口变换 -> 画线/画三角形 -> 片元着色
 private:
     FrameImage *frame_image_;
     std::vector<Triangle *> triangle_list_;
@@ -82,8 +95,8 @@ private:
 
     std::optional<Texture2D> texture;
 
-    std::function<Maths::Vector3f(fragment_shader_payload)> fragment_shader;
-    std::function<Maths::Vector3f(vertex_shader_payload)> vertex_shader;
+    std::function<Maths::Vector3f(FragmentShaderPayload)> fragment_shader;
+    std::function<Maths::Vector3f(VertexShaderPayload)> vertex_shader;
 };
 }
 #endif

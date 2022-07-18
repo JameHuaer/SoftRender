@@ -13,8 +13,6 @@ struct PerspectiveArg {
         aspect_radio = a;
         z_near = zn;
         z_far = zf;
-        // z_near = near;
-        // z_far = far;
     }
     float fov;
     float aspect_radio;
@@ -23,8 +21,8 @@ struct PerspectiveArg {
 };
 struct CameraTransformArg {
     CameraTransformArg() {
-        scale_ = Maths::Vector3f{1.0f, 1.0f,1.0f};
-        rotate_angle_ = Maths::Vector3f{0.0, MathUtil::AngleToRadians(140), 0.0f};
+        scale_ = Maths::Vector3f{1.0f, 1.0f, 1.0f};
+        rotate_angle_ = Maths::Vector3f{0.0, MathUtil::AngleToRadians(60), 0.0f};
         translate_ = Maths::Vector3f{0.0, 0.0, 0.0};
     }
     Maths::Vector3f rotate_angle_;
@@ -37,7 +35,7 @@ public:
     Camera(const Maths::Vector4f &pos,
            const Maths::Vector4f &tar,
            const Maths::Vector4f &u)
-        : position(pos), target(tar), up(u) {
+        : position_(pos), target_(tar), up_(u) {
     }
     Camera()
         : Camera(Maths::Vector4f(0.0f, 0.0f, 10.0f, 0.0f), Maths::Vector4f(0.0f, 0.0f, 0.0f, 0.0f), Maths::Vector4f(0.0f, 1.0f, 0.0f, 0.0f)) {
@@ -46,23 +44,23 @@ public:
 
     //视角矩阵
 
-    Maths::Matrix4f get_projection_matrix();
-    Maths::Matrix4f get_model_matrix();
-    Maths::Matrix4f get_view_matrix();
-    Maths::Matrix4f get_rotate(Maths::Vector3f axis, float angle);
+    Maths::Matrix4f GetProjectionMatrix();
+    Maths::Matrix4f GetModelMatrix();
+    Maths::Matrix4f GetViewMatrix();
+    Maths::Matrix4f GetRotate(Maths::Vector3f axis, float angle);
 
 public:
     CameraTransformArg camera_transform_;
 
-    Maths::Vector4f position;
-    Maths::Vector4f target;
-    Maths::Vector4f up;
+    Maths::Vector4f position_;
+    Maths::Vector4f target_;
+    Maths::Vector4f up_;
 
     Maths::Matrix4f view_;
     Maths::Matrix4f model_;
     Maths::Matrix4f projection_;
 
-    PerspectiveArg perspective_arg; // fov aspect near far
+    PerspectiveArg perspective_arg_; // fov aspect near far
 };
 
 #endif

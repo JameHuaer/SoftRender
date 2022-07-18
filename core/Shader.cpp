@@ -1,10 +1,10 @@
 #include "Shader.h"
 
-Maths::Vector3f vertex_shader(const vertex_shader_payload &payload) {
+Maths::Vector3f VertexShader(const VertexShaderPayload &payload) {
     return payload.position;
 }
 
-Maths::Vector3f normal_fragment_shader(const fragment_shader_payload &payload) {
+Maths::Vector3f NormalFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f return_color = (payload.normal.normalize() + Maths::Vector3f(1.0f, 1.0f, 1.0f)) / 2.f;
     // Maths::Vector3f result;
     // result << return_color.x() * 255, return_color.y() * 255, return_color.z() * 255;
@@ -12,11 +12,11 @@ Maths::Vector3f normal_fragment_shader(const fragment_shader_payload &payload) {
     return return_color;
 }
 
-static Maths::Vector3f reflect(const Maths::Vector3f &vec, const Maths::Vector3f &axis) {
+static Maths::Vector3f Reflect(const Maths::Vector3f &vec, const Maths::Vector3f &axis) {
     auto costheta = vec.Dot(axis);
     return (2 * costheta * axis - vec).normalize();
 }
-Maths::Vector3f texture_fragment_shader(const fragment_shader_payload &payload) {
+Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f return_color = {0, 0, 0};
     if (payload.texture) {
         return_color = payload.texture->getColorBilinear(payload.tex_coords.u, payload.tex_coords.v); //使用双线性插值
@@ -26,13 +26,13 @@ Maths::Vector3f texture_fragment_shader(const fragment_shader_payload &payload) 
     texture_color = {return_color.x, return_color.y, return_color.z};
 
     Maths::Vector3f ka = Maths::Vector3f(0.005, 0.005, 0.005);
-    Maths::Vector3f kd = texture_color; 
+    Maths::Vector3f kd = texture_color;
     Maths::Vector3f ks = Maths::Vector3f(0.7937, 0.7937, 0.7937);
 
-    auto l1 = light{{20, 20, 20}, {500, 500, 500}};
-    auto l2 = light{{-20, 20, 0}, {500, 500, 500}};
+    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
+    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
 
-    std::vector<light> lights = {l1, l2};
+    std::vector<Light> lights = {l1, l2};
     Maths::Vector3f amb_light_intensity{10, 10, 10};
     Maths::Vector3f eye_pos{0, 0, 10};
 
@@ -58,20 +58,20 @@ Maths::Vector3f texture_fragment_shader(const fragment_shader_payload &payload) 
     result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
     result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
     result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
-    return result_color; 
+    return result_color;
 }
 
-Maths::Vector3f phong_fragment_shader(const fragment_shader_payload &payload) {
+Maths::Vector3f PhongFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f result_color = {0, 0, 0};
 
     Maths::Vector3f ka = Maths::Vector3f(0.005, 0.005, 0.005);    //环境光
     Maths::Vector3f kd = payload.color;                           //漫反射
     Maths::Vector3f ks = Maths::Vector3f(0.7937, 0.7937, 0.7937); //高光系数
 
-    auto l1 = light{{20, 20, 20}, {500, 500, 500}};
-    auto l2 = light{{-20, 20, 0}, {500, 500, 500}};
+    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
+    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
 
-    std::vector<light> lights = {l1, l2};
+    std::vector<Light> lights = {l1, l2};
     Maths::Vector3f amb_light_intensity{10, 10, 10}; //环境光强
     Maths::Vector3f eye_pos{0, 0, 10};               //眼睛观测位置
 
@@ -90,25 +90,24 @@ Maths::Vector3f phong_fragment_shader(const fragment_shader_payload &payload) {
         diffuse = kd.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::fmax(0, normal.Dot(l));
         specular = ks.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::pow(std::fmax(0, normal.Dot(h)), p);
         result_color = result_color + (ambient + diffuse + specular);
-
     }
     result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
     result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
     result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
 
-    return result_color; 
+    return result_color;
 }
 
-Maths::Vector3f displacement_fragment_shader(const fragment_shader_payload &payload) {
+Maths::Vector3f DisplacementFragmentShader(const FragmentShaderPayload &payload) {
 
     Maths::Vector3f ka = Maths::Vector3f(0.005, 0.005, 0.005);
     Maths::Vector3f kd = payload.color;
     Maths::Vector3f ks = Maths::Vector3f(0.7937, 0.7937, 0.7937);
 
-    auto l1 = light{{20, 20, 20}, {500, 500, 500}};
-    auto l2 = light{{-20, 20, 0}, {500, 500, 500}};
+    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
+    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
 
-    std::vector<light> lights = {l1, l2};
+    std::vector<Light> lights = {l1, l2};
     Maths::Vector3f amb_light_intensity{10, 10, 10};
     Maths::Vector3f eye_pos{0, 0, 10};
 
@@ -159,16 +158,16 @@ Maths::Vector3f displacement_fragment_shader(const fragment_shader_payload &payl
     return result_color;
 }
 
-Maths::Vector3f bump_fragment_shader(const fragment_shader_payload &payload) {
+Maths::Vector3f BumpFragmentShader(const FragmentShaderPayload &payload) {
 
     Maths::Vector3f ka = Maths::Vector3f(0.005, 0.005, 0.005);
     Maths::Vector3f kd = payload.color;
     Maths::Vector3f ks = Maths::Vector3f(0.7937, 0.7937, 0.7937);
 
-    auto l1 = light{{20, 20, 20}, {500, 500, 500}};
-    auto l2 = light{{-20, 20, 0}, {500, 500, 500}};
+    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
+    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
 
-    std::vector<light> lights = {l1, l2};
+    std::vector<Light> lights = {l1, l2};
     Maths::Vector3f amb_light_intensity{10, 10, 10};
     Maths::Vector3f eye_pos{0, 0, 10};
 
@@ -204,5 +203,5 @@ Maths::Vector3f bump_fragment_shader(const fragment_shader_payload &payload) {
     result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
     result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
 
-    return result_color; 
+    return result_color;
 }

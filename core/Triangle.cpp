@@ -62,3 +62,13 @@ void Triangle::setColors(const std::array<Maths::Vector3f, 3> &colors) {
     setColor(1, colors[1][0], colors[1][1], colors[1][2]);
     setColor(2, colors[2][0], colors[2][1], colors[2][2]);
 }
+void Triangle::setVertexes(const std::array<Maths::Vector4f, 3> &vertexes) {
+    v[0] = vertexes[0];
+    v[1] = vertexes[1];
+    v[2] = vertexes[2];
+}
+void Triangle::setTexCoords(const std::array<Maths::Vector2f, 3> &t) {
+    tex_coords[0] = t[0];
+    tex_coords[1] = t[1];
+    tex_coords[2] = t[2];
+}

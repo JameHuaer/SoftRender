@@ -19,7 +19,6 @@ void Win32Platform::OnMouseMove(WPARAM btn_state, int x, int y) {
         camera->camera_transform_.rotate_angle_.y += dx;
 
     } else if (btn_state & MK_RBUTTON) {
-        // TODO 平移,待优化
         float dx = 0.01f * static_cast<float>(x - Win32Platform::last_mouse_position.x);
         float dy = 0.01f * static_cast<float>(y - Win32Platform::last_mouse_position.y);
         camera->camera_transform_.translate_.x += dx;
