@@ -20,10 +20,6 @@ Rasterizer::Rasterizer(int w, int h)
     std::string obj_path = R"(../models\cube.obj)";
     std::string texture_path = R"(../models/spot_texture.bmp)";
 
-    // DEBUG
-    // std::string obj_path = R"(H:\zulong\Learning\MyRender\SoftRenderYLQ\models\cube.obj)";
-    // std::string obj_path = R"(H:\zulong\Learning\MyRender\SoftRenderYLQ\models\Triangle.obj)";
-    // std::string texture_path = R"(H:\zulong\Learning\MyRender\SoftRenderYLQ\models/spot_texture.bmp)";
 
     //将obj数据存放在triangle中.
     ObjLoader obj_load;
