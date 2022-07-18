@@ -25,11 +25,11 @@ bool Rasterizer::IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs) {
 
 由于使用多边形裁剪需要考虑该种情况，图中蓝色区域
 
-![image-20220718110304528](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220718110304528.png)
+![image-20220718110304528](./QuestionImage/image-20220718110304528.png)
 
 裁剪区域的边角点也需要考虑，最后划分出新的三角形，蓝色区域划分出两个新三角形
 
-![image-20220718110412528](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20220718110412528.png)
+![image-20220718110412528](./QuestionImage/image-20220718110412528.png)
 
 由于考虑到点的插入顺序，会影响三角形的划分，所以在无序插入情况下，需要先对点集进行顺时针或者逆时针排序，然后划分三角形。
 
