@@ -35,5 +35,6 @@ Maths::Vector4f Interpolate(float alpha, float beta, float gamma,
 void SortPoint(std::vector<VertexData> &vecs);
 bool LessFunction(const VertexData &lhs, const VertexData &rhs);
 Maths::Vector3f GetCenterPoint(const std::vector<VertexData> &vecs);
+Maths::Vector3f ColorConverto(const Maths::Vector3f &cor);
 }
 #endif

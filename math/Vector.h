@@ -52,6 +52,15 @@ namespace Maths {
         }
         return result;
     }
+        //向量加法运算
+    template <int size>
+    Vector<size> operator+(const Vector<size> &lhs, float rhs) {
+        Vector<size> result;
+        for (int i = 0; i < size; ++i) {
+            result[i] = lhs[i] + rhs;
+        }
+        return result;
+    }
     //向量减法运算
     template <int size>
     Vector<size> operator-(const Vector<size> &lhs, const Vector<size> &rhs) {

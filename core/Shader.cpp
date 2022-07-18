@@ -19,7 +19,7 @@ static Maths::Vector3f Reflect(const Maths::Vector3f &vec, const Maths::Vector3f
 Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f return_color = {0, 0, 0};
     if (payload.texture) {
-        return_color = payload.texture->getColorBilinear(payload.tex_coords.u, payload.tex_coords.v); //使用双线性插值
+        return_color = payload.texture->GetColorBilinear(payload.tex_coords.u, payload.tex_coords.v); //使用双线性插值
         // return_color = payload.texture->getColor(payload.tex_coords.x(), payload.tex_coords.y());
     }
     Maths::Vector3f texture_color;
@@ -52,12 +52,11 @@ Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
         ambient = ka.CWiseProduct(amb_light_intensity);
         diffuse = kd.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::fmax(0, normal.Dot(l));
         specular = ks.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::pow(std::fmax(0, normal.Dot(h)), p);
-        // (std::cout << specular << std::endl);
         result_color = result_color + (ambient + diffuse + specular);
     }
-    result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
-    result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
-    result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
+    result_color.x = MathUtil::Clamp(result_color.x, 0.0f, 1.0f);
+    result_color.y = MathUtil::Clamp(result_color.y, 0.0f, 1.0f);
+    result_color.z = MathUtil::Clamp(result_color.z, 0.0f, 1.0f);
     return result_color;
 }
 
@@ -91,9 +90,9 @@ Maths::Vector3f PhongFragmentShader(const FragmentShaderPayload &payload) {
         specular = ks.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::pow(std::fmax(0, normal.Dot(h)), p);
         result_color = result_color + (ambient + diffuse + specular);
     }
-    result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
-    result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
-    result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
+    result_color.x = MathUtil::Clamp(result_color.x, 0.0f, 1.0f);
+    result_color.y = MathUtil::Clamp(result_color.y, 0.0f, 1.0f);
+    result_color.z = MathUtil::Clamp(result_color.z, 0.0f, 1.0f);
 
     return result_color;
 }
@@ -119,24 +118,25 @@ Maths::Vector3f DisplacementFragmentShader(const FragmentShaderPayload &payload)
 
     float kh = 0.2, kn = 0.1;
 
-    Maths::Vector3f n = normal;
     float x = normal.x, y = normal.y, z = normal.z;
     Maths::Vector3f t = {x * y / (float)sqrt(x * x + z * z), (float)sqrt(x * x + z * z), z * y / (float)sqrt(x * x + z * z)};
-    Maths::Vector3f b = n.Cross(t);
+    Maths::Vector3f b = normal.Cross(t);
     Maths::Matrix3f TBN;
+
     TBN = {{{t.x, t.y, t.z},
             {b.x, b.y, b.z},
-            {n.x, n.y, n.z}}};
+            {normal.x, normal.y, normal.z}}};
 
     float u, v, w, h;
     u = payload.tex_coords.u;
     v = payload.tex_coords.v;
     w = payload.texture->width_;
     h = payload.texture->height_;
-    float du = kh * kn * (payload.texture->getColorBilinear(u + 1.0 / w, v).norm() - payload.texture->getColorBilinear(u, v).norm());
-    float dv = kh * kn * (payload.texture->getColorBilinear(u, v + 1.0 / h).norm() - payload.texture->getColorBilinear(u, v).norm());
+    //modify 根据uv获取颜色值需要*255后范围才是[0-1]
+    float du = kh * kn * (payload.texture->GetColorBilinear(u + 1.0 / w, v).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
+    float dv = kh * kn * (payload.texture->GetColorBilinear(u, v + 1.0 / h).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
     Maths::Vector3f ln(-du, dv, 1.0);
-    point = point + kn * n * payload.texture->getColorBilinear(u, v).norm();
+    point = point + kn * normal * payload.texture->GetColorBilinear(u, v).norm();
     normal = (TBN * ln).normalize();
 
     Maths::Vector3f result_color = {0, 0, 0};
@@ -151,9 +151,9 @@ Maths::Vector3f DisplacementFragmentShader(const FragmentShaderPayload &payload)
         specular = ks.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::pow(std::fmax(0, normal.Dot(h_vector)), p);
         result_color = result_color + (ambient + diffuse + specular);
     }
-    result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
-    result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
-    result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
+    result_color.x = MathUtil::Clamp(result_color.x, 0.0f, 1.0f);
+    result_color.y = MathUtil::Clamp(result_color.y, 0.0f, 1.0f);
+    result_color.z = MathUtil::Clamp(result_color.z, 0.0f, 1.0f);
 
     return result_color;
 }
@@ -183,25 +183,28 @@ Maths::Vector3f BumpFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f t = {x * y / (float)sqrt(x * x + z * z), (float)sqrt(x * x + z * z), z * y / (float)sqrt(x * x + z * z)};
     Maths::Vector3f b = normal.Cross(t);
     Maths::Matrix3f TBN;
+
     TBN = {{{t.x, t.y, t.z},
             {b.x, b.y, b.z},
             {normal.x, normal.y, normal.z}}};
+
     float u, v, w, h;
     u = payload.tex_coords.u;
     v = payload.tex_coords.v;
     w = payload.texture->width_;
     h = payload.texture->height_;
-    float du = kh * kn * (payload.texture->getColorBilinear(u + 1.0 / w, v).norm() - payload.texture->getColorBilinear(u, v).norm());
-    float dv = kh * kn * (payload.texture->getColorBilinear(u, v + 1.0 / h).norm() - payload.texture->getColorBilinear(u, v).norm());
+    float du = kh * kn * (payload.texture->GetColorBilinear(u + 1.0 / w, v).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
+    float dv = kh * kn * (payload.texture->GetColorBilinear(u, v + 1.0 / h).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
     Maths::Vector3f ln = {-du, dv, 1.0};
     normal = (TBN * ln).normalize();
 
     Maths::Vector3f result_color = {0, 0, 0};
     result_color = normal;
 
-    result_color.x = result_color.x > 1.0f ? 1.0f : result_color.x;
-    result_color.y = result_color.y > 1.0f ? 1.0f : result_color.y;
-    result_color.z = result_color.z > 1.0f ? 1.0f : result_color.z;
+    //限定颜色值为[0-1]
+    result_color.x = MathUtil::Clamp(result_color.x, 0.0f, 1.0f);
+    result_color.y = MathUtil::Clamp(result_color.y, 0.0f, 1.0f);
+    result_color.z = MathUtil::Clamp(result_color.z, 0.0f, 1.0f);
 
     return result_color;
 }

@@ -15,10 +15,11 @@ Rasterizer::Rasterizer(int w, int h)
     win32_platform_ = new PlatForms::Win32Platform(camera_);
     //加载模型
     std::string obj_path = R"(../models/spot_triangulated_good.obj)";
-    // std::string obj_path = R"(../models/Baby Zebra.obj)";
-    // std::string obj_path = R"(../models\AnyConv.com__Bee.obj)";
-    // std::string obj_path = R"(../models\cube.obj)";
-    std::string texture_path = R"(../models/spot_texture.bmp)";
+    //  std::string obj_path = R"(../models/Baby Zebra.obj)";
+    //  std::string obj_path = R"(../models\AnyConv.com__Bee.obj)";
+    //  std::string obj_path = R"(../models\cube.obj)";
+    //  std::string texture_path = R"(../models/spot_texture.bmp)";
+     std::string texture_path = R"(../models/hmap.bmp)";
 
     //将obj数据存放在triangle中.
     ObjLoader obj_load;
@@ -36,7 +37,7 @@ Rasterizer::Rasterizer(int w, int h)
     //加载纹理贴图
     SetTexture(Texture2D(texture_path));
     //  设置顶点着色模型和片元着色模型
-    SetFragmentShader(NormalFragmentShader);
+    SetFragmentShader(DisplacementFragmentShader);
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
@@ -155,7 +156,7 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
             if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
                 continue;
             if (MathUtil::InsideTriangle(x, y, t.v)) {
-                std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x, y, t.v);
+                std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5, y + 0.5, t.v);
                 float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
                 float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                 z_interpolated *= w_reciprocal;
@@ -199,7 +200,7 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     int y = y0;
     for (int x = x0; x <= x1; x++) {
         if (steep) {
-            // [0,width-1],[0,height-1] 
+            // [0,width-1],[0,height-1]
             frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x), MathUtil::RGBToUint(line_color));
         } else {
             frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y), MathUtil::RGBToUint(line_color));
@@ -212,7 +213,7 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     }
 }
 void Rasterizer::Update() {
-    frame_image_->ClearBuffer(Maths::Vector4f{0.75f, 0.75f, 0.75f});//设置背景色
+    frame_image_->ClearBuffer(Maths::Vector4f{0.0f, 0.0f, 0.0f}); //设置背景色
     SetModel(camera_->GetModelMatrix());
     SetView(camera_->GetViewMatrix());
     SetProjection(camera_->GetProjectionMatrix());

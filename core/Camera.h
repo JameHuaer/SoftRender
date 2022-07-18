@@ -21,8 +21,8 @@ struct PerspectiveArg {
 };
 struct CameraTransformArg {
     CameraTransformArg() {
-        scale_ = Maths::Vector3f{1.0f, 1.0f, 1.0f};
-        rotate_angle_ = Maths::Vector3f{0.0, MathUtil::AngleToRadians(60), 0.0f};
+        scale_ = Maths::Vector3f{2.5f, 2.5f, 2.5f};
+        rotate_angle_ = Maths::Vector3f{0.0, MathUtil::AngleToRadians(320), 0.0f};
         translate_ = Maths::Vector3f{0.0, 0.0, 0.0};
     }
     Maths::Vector3f rotate_angle_;

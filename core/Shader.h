@@ -3,6 +3,7 @@
 #define RASTERIZER_SHADER_H
 #include "../math/Matrix.h"
 #include "../math/Vector.h"
+#include "../math/MathUtil.h"
 #include "Texture.h"
 #include <vector>
 struct FragmentShaderPayload {

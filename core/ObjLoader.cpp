@@ -28,7 +28,7 @@ void ObjLoader::LoadFile(const std::string &file_path) {
             Maths::Vector2f uv;
             for (int i = 0; i < 2; i++)
                 iss >> uv[i];
-            obj_data_.tex_coord.push_back({uv.u, 1 - uv.v});
+            obj_data_.tex_coord.push_back({uv.u, uv.v}); // modify 法线贴图错误问题所在，
         } else if (!line.compare(0, 2, "f ")) {
             int f, t, n;
             iss >> trash;
@@ -52,4 +52,3 @@ void ObjLoader::LoadFile(const std::string &file_path) {
     // load_texture(filename, "_nm_tangent.tga", normalmap);
     // load_texture(filename, "_spec.tga", specularmap);
 }
-

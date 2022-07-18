@@ -1,6 +1,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 #include "../math/Vector.h"
+#include "../math/MathUtil.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -61,7 +62,7 @@ public:
     }
     Maths::Vector4f GetColor(float u, float v);
     Maths::Vector4f Sample(const Maths::Vector2f tex);
-    Maths::Vector3f getColorBilinear(float u, float v);
+    Maths::Vector3f GetColorBilinear(float u, float v);
 
 public:
     int width_;

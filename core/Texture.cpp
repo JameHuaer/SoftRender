@@ -83,11 +83,14 @@ Maths::Vector4f Texture2D::Sample(const Maths::Vector2f tex) {
 Maths::Vector4f Texture2D::GetColor(float u, float v) {
 
     uint32_t u_img = u * width_;
-    uint32_t v_img = (1 - v) * height_;
+    uint32_t v_img = v * height_;
+    u_img = MathUtil::Clamp(u_img, 0, width_ - 1);
+    v_img = MathUtil::Clamp(v_img, 0, height_ - 1);
+
     return texture_buffer_[u_img][v_img];
 }
 
-Maths::Vector3f Texture2D::getColorBilinear(float u, float v) {
+Maths::Vector3f Texture2D::GetColorBilinear(float u, float v) {
     if (u < 0)
         u = 0;
     if (u > 1)
@@ -98,9 +101,8 @@ Maths::Vector3f Texture2D::getColorBilinear(float u, float v) {
         v = 1;
 
     float u_img = u * width_;
-    //u_img = static_cast<uint32_t>(u_img/*)*/ == width_ ? u_img - 1 : u_img;
-    float v_img = (1 - v) * height_;
-
+    float v_img = v * height_;
+    //防止访问图片数组越界
     int u_min = std::min((float)width_ - 1, std::floor(u_img)); 
     int u_max = std::min((float)width_-1, std::ceil(u_img));
 
