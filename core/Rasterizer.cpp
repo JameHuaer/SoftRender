@@ -18,8 +18,8 @@ Rasterizer::Rasterizer(int w, int h)
     //  std::string obj_path = R"(../models/Baby Zebra.obj)";
     //  std::string obj_path = R"(../models\AnyConv.com__Bee.obj)";
     //  std::string obj_path = R"(../models\cube.obj)";
-    //  std::string texture_path = R"(../models/spot_texture.bmp)";
-     std::string texture_path = R"(../models/hmap.bmp)";
+    std::string texture_path = R"(../models/spot_texture.bmp)";
+    // std::string texture_path = R"(../models/hmap.bmp)";
 
     //将obj数据存放在triangle中.
     ObjLoader obj_load;
@@ -37,11 +37,12 @@ Rasterizer::Rasterizer(int w, int h)
     //加载纹理贴图
     SetTexture(Texture2D(texture_path));
     //  设置顶点着色模型和片元着色模型
-    SetFragmentShader(DisplacementFragmentShader);
+    SetFragmentShader(TextureFragmentShader);
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
     fill_mode = kSolide;
+    IsUseMSAA = true;
 }
 
 void Rasterizer::Draw() {
@@ -125,7 +126,11 @@ void Rasterizer::Draw() {
                 DrawLine(clip_triangle[i].v[1].head3(), clip_triangle[i].v[2].head3());
                 break;
             case kSolide:
-                RasterizeTriangle(clip_triangle[i], viewspace_pos);
+                if (IsUseMSAA)
+                    RasterizeTriangleMSAA(clip_triangle[i], viewspace_pos);
+                else
+                    RasterizeTriangle(clip_triangle[i], viewspace_pos);
+
                 break;
             default:
                 break;
@@ -172,6 +177,70 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
                     frame_image_->GetFrameBuffer()[id] = MathUtil::RGBToUint(fragment_shader(payload));
                 }
             }
+        }
+    }
+}
+
+// 屏幕空间光栅化
+void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths::Vector3f, 3> &view_pos) {
+
+    auto v = t.toVector4(); //所有顶点的w值都设为1
+    float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
+    for (const auto &k : v) {
+        lmin = (std::min)(lmin, k.x);
+        rmax = (std::max)(rmax, k.x);
+        bmin = (std::min)(bmin, k.y);
+        tmax = (std::max)(tmax, k.y);
+    }
+    lmin = std::floor(lmin);
+    rmax = std::ceil(rmax);
+    bmin = std::floor(bmin);
+    tmax = std::ceil(tmax);
+    for (int x = lmin; x < rmax; ++x) {
+        for (int y = bmin; y < tmax; ++y) {
+            //使用MSAA
+            float min_depth = FLOAT_MAX;
+            int sample_k = 0;
+            int id = frame_image_->GetIndex(x, y);
+
+            float delta_msaa_rate = 1 / sqrt(frame_image_->MSAA_rate);
+            //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
+            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
+                continue;
+            id *= frame_image_->MSAA_rate;
+
+            // for (float inner_x = delta_msaa_rate / 2.0; inner_x < 1; inner_x += delta_msaa_rate) {
+            //     for (float inner_y = delta_msaa_rate / 2.0; inner_y < 1; inner_y += delta_msaa_rate, ++sample_k) {
+            for (float inner_x = 0.25; inner_x < 1; inner_x += 0.5) {
+                for (float inner_y = 0.25; inner_y < 1; inner_y += 0.5, ++sample_k) {
+                    float point_x = x + inner_x;
+                    float point_y = y + inner_y;
+                    if (MathUtil::InsideTriangle(point_x, point_y, t.v)) {
+                        std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(point_x, point_y, t.v);
+                        float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
+                        float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
+                        z_interpolated *= w_reciprocal;
+                        if (z_interpolated < frame_image_->z_sample_buffer[id + sample_k]) {
+                            auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);                    //颜色插值
+                            auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);                //法向量插值
+                            auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
+                            auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);         //着色点坐标插值
+
+                            FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(), interpolater_texcoords, texture ? &*texture : nullptr);
+                            payload.view_pos = interpolater_shadingcoords;
+                            frame_image_->z_sample_buffer[id + sample_k] = z_interpolated;
+                            frame_image_->frame_sample_buffer[id + sample_k] = fragment_shader(payload) / 4;
+                        }
+                        min_depth = std::min(min_depth, z_interpolated); //记录最小深度
+                    }
+                }
+            }
+            Maths::Vector3f color = {0, 0, 0};
+            for (int i = 0; i < frame_image_->MSAA_rate; ++i) {
+                color = color + frame_image_->frame_sample_buffer[id + i];
+            }
+            frame_image_->SetDepth(x, y, std::min(frame_image_->GetDepth(x, y), min_depth));
+            frame_image_->GetFrameBuffer()[frame_image_->GetIndex(x, y)] = MathUtil::RGBToUint(color);
         }
     }
 }

@@ -67,7 +67,7 @@ public:
     bool IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs);
     //简单CVV裁剪
     bool IsClipSimple(const Triangle &t);
-    //CohenSutherLand多边形裁剪
+    // CohenSutherLand多边形裁剪
     void IsCohenSutherLandClip(const Triangle &tri, std::vector<Triangle> &res);
     //多边形裁剪获得与正方体焦点
     void GetCrossVertex(const Triangle &t, std::vector<VertexData> &v_out);
@@ -79,13 +79,14 @@ public:
 public:
     int width, height;
     PlatForms::Win32Platform *win32_platform_;
-    ModelFillMode fill_mode;//填充模式
+    ModelFillMode fill_mode; //填充模式
+    bool IsUseMSAA;
 
 private:
     void DrawLine(Maths::Vector3f begin, Maths::Vector3f end);
 
     void RasterizeTriangle(const Triangle &t, const std::array<Maths::Vector3f, 3> &world_pos);
-
+    void RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths::Vector3f, 3> &view_pos);
     // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER
     //顶点着色 -> mvp变换 -> 剔除/裁剪 -> 透视除法 -> 视口变换 -> 画线/画三角形 -> 片元着色
 private:

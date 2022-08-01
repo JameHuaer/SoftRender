@@ -23,11 +23,15 @@ public:
     int GetIndex(int x, int y);
     static const Maths::Vector4f kGray;
 
-private:
+public:
     int width;              //图片宽
     int height;             //图片高
     uint32_t *frame_buffer; //帧图片颜色缓存
     float **z_buffer;       //帧图片深度信息缓存
+    int MSAA_rate = 4;      // MSAA
+
+    std::vector<Maths::Vector3f> frame_sample_buffer;
+    std::vector<float> z_sample_buffer; //帧图片深度信息缓存
 };
 
 #endif

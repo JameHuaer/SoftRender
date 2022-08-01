@@ -11,6 +11,8 @@ FrameImage::FrameImage(int w, int h)
             z_buffer[i][j] = FLOAT_MAX;
         }
     }
+    frame_sample_buffer.resize(width * height * MSAA_rate);
+    z_sample_buffer.resize(width * height * MSAA_rate, FLOAT_MAX);
 }
 FrameImage::~FrameImage() {
     if (frame_buffer)
@@ -21,6 +23,14 @@ FrameImage::~FrameImage() {
         }
 }
 void FrameImage::Resize(int new_width, int new_height) {
+    //记录调整前的数据
+    std::vector<Maths::Vector3f> old_frame_sample_buffer(frame_sample_buffer);
+    std::vector<float> old_z_sample_buffer(z_sample_buffer);
+    //resize MSAA采样数组
+    frame_sample_buffer.resize(new_width * new_height * MSAA_rate);
+    z_sample_buffer.resize(new_height * new_width * MSAA_rate);
+    std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
+
     //宽高resize
     //创建一个新的二维数组
     float **new_z_buffer = new float *[new_height];
@@ -36,6 +46,22 @@ void FrameImage::Resize(int new_width, int new_height) {
     int col_start = std::abs(new_width - width) / 2;
     int row_max = std::min(new_height, height) + row_start;
     int col_max = std::min(new_width, width) + col_start;
+
+    for (int i = row_start; i < row_max; ++i) {
+        for (int j = col_start; j < col_max; ++j) {
+            if (new_width <= width) {
+                if (new_height <= height)
+                    frame_sample_buffer[(i - row_start) * new_width + j - col_start] = old_frame_sample_buffer[i * new_width + j]; // 1
+                else
+                    frame_sample_buffer[i * new_width + j - col_start] = old_frame_sample_buffer[(i - row_start) * new_width + j]; // 2
+            } else {
+                if (new_height <= height)
+                    frame_sample_buffer[(i - row_start) * new_width + j] = old_frame_sample_buffer[i * new_width + j - col_start]; // 3
+                else
+                    frame_sample_buffer[i * new_width + j] = old_frame_sample_buffer[(i - row_start) * new_width + j - col_start]; // 4
+            }
+        }
+    }
     for (int i = row_start; i < row_max; ++i) {
         for (int j = col_start; j < col_max; ++j) {
             if (new_width <= width) {
@@ -70,6 +96,8 @@ void FrameImage::ClearBuffer(const Maths::Vector4f &color) {
             z_buffer[y][x] = FLOAT_MAX;
         }
     }
+    std::fill(frame_sample_buffer.begin(), frame_sample_buffer.end(), color.head3());
+    std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
 }
 uint32_t *&FrameImage::GetFrameBuffer() {
     return frame_buffer;
@@ -77,20 +105,20 @@ uint32_t *&FrameImage::GetFrameBuffer() {
 //画像素点
 void FrameImage::DrawPixel(int x, int y, const Maths::Vector4f &color) {
     if (x >= 0 && x < width && y >= 0 && y < height)
-    frame_buffer[width * y + x] = MathUtil::RGBToUint(color);
+        frame_buffer[width * y + x] = MathUtil::RGBToUint(color);
 }
 void FrameImage::DrawPixel(int x, int y, uint32_t rgb) {
     if (x >= 0 && x < width && y >= 0 && y < height)
-    frame_buffer[width * y + x] = rgb;
+        frame_buffer[width * y + x] = rgb;
 }
 float FrameImage::GetDepth(int x, int y) const {
     if (x >= 0 && x < width && y >= 0 && y < height)
-    return z_buffer[y][x];
+        return z_buffer[y][x];
     return 1.0f;
 }
 void FrameImage::SetDepth(int x, int y, float z) {
     if (x >= 0 && x < width && y >= 0 && y < height)
-    z_buffer[y][x] = z;
+        z_buffer[y][x] = z;
 }
 int FrameImage::GetWidth() {
     return width;
@@ -99,6 +127,6 @@ int FrameImage::GetHeight() {
     return height;
 }
 int FrameImage::GetIndex(int x, int y) {
-    return (height - y - 1) * width + x - 1; 
+    return (height - y - 1) * width + x - 1;
     // return width * y + x;
 }
