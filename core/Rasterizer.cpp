@@ -209,10 +209,10 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
                 continue;
             id *= frame_image_->MSAA_rate;
 
-            // for (float inner_x = delta_msaa_rate / 2.0; inner_x < 1; inner_x += delta_msaa_rate) {
-            //     for (float inner_y = delta_msaa_rate / 2.0; inner_y < 1; inner_y += delta_msaa_rate, ++sample_k) {
-            for (float inner_x = 0.25; inner_x < 1; inner_x += 0.5) {
-                for (float inner_y = 0.25; inner_y < 1; inner_y += 0.5, ++sample_k) {
+            for (float inner_x = delta_msaa_rate / 2.0; inner_x < 1; inner_x += delta_msaa_rate) {
+                for (float inner_y = delta_msaa_rate / 2.0; inner_y < 1; inner_y += delta_msaa_rate, ++sample_k) {
+                    // for (float inner_x = 0.25; inner_x < 1; inner_x += 0.5) {
+                    //     for (float inner_y = 0.25; inner_y < 1; inner_y += 0.5, ++sample_k) {
                     float point_x = x + inner_x;
                     float point_y = y + inner_y;
                     if (MathUtil::InsideTriangle(point_x, point_y, t.v)) {
