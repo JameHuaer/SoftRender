@@ -21,6 +21,21 @@ Rasterizer::Rasterizer(int w, int h)
     std::string texture_path = R"(../models/spot_texture.bmp)";
     // std::string texture_path = R"(../models/hmap.bmp)";
 
+    // floor 注意：三角形顺序该项目是逆时针索引，不然会着色在背面。
+    float florrScale = 2.0f;
+    Maths::Vector3f verts[4] = {{-1 * florrScale, -1, -1 * florrScale}, {1 * florrScale, -1, -1 * florrScale}, {1 * florrScale, -1, 1 * florrScale}, {-1 * florrScale, -1, 1 * florrScale}}; //顶点
+    uint32_t vertIndex[6] = {0, 3, 2, 0, 2, 1};                                                                                                                                              //三角形索引
+    Maths::Vector2f st[4] = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};                                                                                                                                //
+    for (int i = 0; i < 2; ++i) {
+        Triangle *triangleFloor = new Triangle();
+        for (int j = 0; j < 3; j++) {
+            triangleFloor->setVertex(j, Maths::ToVector4f(verts[vertIndex[i * 3 + j]], 1.0f));
+            triangleFloor->setNormal(j, Maths::Vector3f(0, 1, 0));
+            triangleFloor->setTexCoord(j, st[vertIndex[i * 3 + j]]);
+        }
+        triangle_list_.push_back(triangleFloor);
+    }
+
     //将obj数据存放在triangle中.
     ObjLoader obj_load;
     obj_load.LoadFile(obj_path);
@@ -42,9 +57,26 @@ Rasterizer::Rasterizer(int w, int h)
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
     fill_mode = kSolide;
-    IsUseMSAA = true;
+    IsUseMSAA = false;
+}
+void Rasterizer::Update() {
+    frame_image_->ClearBuffer(Maths::Vector4f{0.6, 0.6, 0.6}); //设置背景色
+    SetModel(camera_->GetModelMatrix());
+    SetView(camera_->GetViewMatrix());
+    SetProjection(camera_->GetProjectionMatrix());
 }
 
+void Rasterizer::Render() {
+    Draw();
+}
+void Rasterizer::CalculateLightZBuffer() {
+    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
+    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
+    std::vector<Light> lights = {l2};
+    for (auto &light : lights) {
+        
+    }
+}
 void Rasterizer::Draw() {
 
     float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0; // 24.95
@@ -69,7 +101,7 @@ void Rasterizer::Draw() {
         //背面剔除
         if (IsBackFaceCulling(viewspace_pos))
             continue;
-        //计算MVP矩阵
+        //将三角形世界坐标转换到摄像机坐标
         newtri.v[0] = mvp * t->v[0];
         newtri.v[1] = mvp * t->v[1];
         newtri.v[2] = mvp * t->v[2];
@@ -139,7 +171,7 @@ void Rasterizer::Draw() {
         clip_triangle.clear();
     }
 }
-// 屏幕空间光栅化
+// 屏幕空间光栅化，光栅化三角形。
 void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Vector3f, 3> &view_pos) {
 
     auto v = t.toVector4(); //所有顶点的w值都设为1
@@ -280,16 +312,6 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
             error2 -= dx * 2;
         }
     }
-}
-void Rasterizer::Update() {
-    frame_image_->ClearBuffer(Maths::Vector4f{0.0f, 0.0f, 0.0f}); //设置背景色
-    SetModel(camera_->GetModelMatrix());
-    SetView(camera_->GetViewMatrix());
-    SetProjection(camera_->GetProjectionMatrix());
-}
-
-void Rasterizer::Render() {
-    Draw();
 }
 
 void Rasterizer::Resize(int w, int h) {

@@ -1,4 +1,5 @@
 #include "Shader.h"
+Maths::Vector3f floorVerts[4] = {{-1, -1, -1}, {1, -1, -1}, {1, -1, 1}, {-1, -1, 1}}; //顶点
 
 Maths::Vector3f VertexShader(const VertexShaderPayload &payload) {
     return payload.position;
@@ -32,10 +33,12 @@ Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
     auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
     auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
 
-    std::vector<Light> lights = {l1, l2};
+    std::vector<Light> lights = {l2};
     Maths::Vector3f amb_light_intensity{10, 10, 10};
     Maths::Vector3f eye_pos{0, 0, 10};
 
+    // TODO: l1和l2一左一右两束光线，实现shadow mapping 可能最好先取消一条光线，好实现，
+    //目前的思路是：地面设定为y = -1 首先使用光线到物体（像素点），生成一张深度图，然后从视点看向物体生成一张深度图，对比两张深度图，视点深度图数值大的则为黑色，否则为原来色。
     float p = 150;
 
     Maths::Vector3f color = texture_color;
@@ -49,6 +52,7 @@ Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
         l = (light.position - point).normalize();
         v = (eye_pos - point).normalize();
         h = (l + v).normalize();
+
         ambient = ka.CWiseProduct(amb_light_intensity);
         diffuse = kd.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::fmax(0, normal.Dot(l));
         specular = ks.CWiseProduct(light.intensity / (light.position - point).Dot(light.position - point)) * std::pow(std::fmax(0, normal.Dot(h)), p);
@@ -132,7 +136,7 @@ Maths::Vector3f DisplacementFragmentShader(const FragmentShaderPayload &payload)
     v = payload.tex_coords.v;
     w = payload.texture->width_;
     h = payload.texture->height_;
-    //modify 根据uv获取颜色值需要*255后范围才是[0-1]
+    // modify 根据uv获取颜色值需要*255后范围才是[0-1]
     float du = kh * kn * (payload.texture->GetColorBilinear(u + 1.0 / w, v).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
     float dv = kh * kn * (payload.texture->GetColorBilinear(u, v + 1.0 / h).norm() * 255.0 - payload.texture->GetColorBilinear(u, v).norm() * 255.0);
     Maths::Vector3f ln(-du, dv, 1.0);

@@ -75,6 +75,7 @@ public:
     int ComputeOutCode(double x, double y, double z, double w);
     //插值新点，并push到点集中
     void LerpAndPushVertex(const Triangle &tri, const Maths::Vector3f &v, std::vector<VertexData> &res);
+    void CalculateLightZBuffer();
 
 public:
     int width, height;
