@@ -6,6 +6,7 @@
 #include "FrameImage.h"
 #include "ObjLoader.h"
 #include "Shader.h"
+#include "ShadowMapping.h"
 #include "Triangle.h"
 #include "global.h"
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include <map>
 #include <optional>
 #include <vector>
-
 namespace rst {
 
 //模型填充模式
@@ -44,6 +44,8 @@ public:
         }
         if (camera_)
             delete camera_;
+        if (shadowMapping_)
+            delete shadowMapping_;
     }
 
     void SetModel(const Maths::Matrix4f &m);
@@ -63,8 +65,7 @@ public:
     void Render();
     //窗口尺寸变化时resize
     void Resize(int w, int h);
-    //背面剔除
-    bool IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs);
+
     //简单CVV裁剪
     bool IsClipSimple(const Triangle &t);
     // CohenSutherLand多边形裁剪
@@ -94,6 +95,7 @@ private:
     FrameImage *frame_image_;
     std::vector<Triangle *> triangle_list_;
     Camera *camera_;
+    ShadowMapping *shadowMapping_;
 
     Maths::Matrix4f model;
     Maths::Matrix4f view;

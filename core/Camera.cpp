@@ -71,9 +71,6 @@ Maths::Matrix4f Camera::GetProjectionMatrix() {
                       {0, 1, 0, 0},
                       {0, 0, 1, 0},
                       {-(r + l) / 2, -(b + t) / 2, -(perspective_arg_.z_near + perspective_arg_.z_far) / 2.0f, 1}}};
-    auto test1 = m_ortho_scale * m_ortho_trans;
-    auto test2 = test1 * persp_to_ortho;
-    auto test3 = test2 * projection;
     projection = m_ortho_scale * m_ortho_trans * persp_to_ortho * projection;
 
     projection_ = projection;

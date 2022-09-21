@@ -3,6 +3,7 @@
 //
 
 #include "Rasterizer.h"
+#include "RenderUtil.h"
 #include <algorithm>
 #include <fstream>
 #include <math.h>
@@ -53,6 +54,10 @@ Rasterizer::Rasterizer(int w, int h)
     SetTexture(Texture2D(texture_path));
     //  设置顶点着色模型和片元着色模型
     SetFragmentShader(TextureFragmentShader);
+    //初始化shadowMapping
+    Maths::Vector3f lightPosition = {-20, 20, 0};
+    Maths::Vector3f lightIntensity = {500, 500, 500};
+    shadowMapping_ = new ShadowMapping(lightPosition, lightIntensity);
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
@@ -64,6 +69,8 @@ void Rasterizer::Update() {
     SetModel(camera_->GetModelMatrix());
     SetView(camera_->GetViewMatrix());
     SetProjection(camera_->GetProjectionMatrix());
+    // TODO: 更新光源深度图。
+    shadowMapping_->UpdateShadowMappingDepth(triangle_list_);
 }
 
 void Rasterizer::Render() {
@@ -74,7 +81,6 @@ void Rasterizer::CalculateLightZBuffer() {
     auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
     std::vector<Light> lights = {l2};
     for (auto &light : lights) {
-        
     }
 }
 void Rasterizer::Draw() {
@@ -140,9 +146,6 @@ void Rasterizer::Draw() {
                 clip_triangle[i].v[j].x = 0.5 * width * (clip_triangle[i].v[j].x + 1.0);
                 clip_triangle[i].v[j].y = 0.5 * height * (clip_triangle[i].v[j].y + 1.0);
                 clip_triangle[i].v[j].z = clip_triangle[i].v[j].z * f1 + f2;
-            }
-            if (std::fmax(std::fmax(clip_triangle[i].v[0].x, clip_triangle[i].v[1].x), clip_triangle[i].v[2].x) == 784) {
-                int dd = 1;
             }
             // view space normal
             clip_triangle[i].setNormals({n[0].head3(), n[1].head3(), n[2].head3()}); //向量缩小到3维
@@ -319,16 +322,7 @@ void Rasterizer::Resize(int w, int h) {
     height = h;
     frame_image_->Resize(w, h);
 }
-bool Rasterizer::IsBackFaceCulling(const std::array<Maths::Vector3f, 3> &vecs) {
-    Maths::Vector3f vec1 = (vecs[1] - vecs[0]);
-    Maths::Vector3f vec2 = (vecs[2] - vecs[1]);
-    Maths::Vector3f view_direction = vecs[1]; //摄像机默认设置在原点
-    Maths::Vector3f n = vec1.Cross(vec2);
-    if (view_direction.Dot(n) > 0.0f)
-        return true;
 
-    return false;
-}
 //简单cvv裁剪
 bool Rasterizer::IsClipSimple(const Triangle &t) {
     //[-1,1]^3，/ X在[-1,1], y在[-1,1], z在[-2,0]
