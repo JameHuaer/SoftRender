@@ -165,7 +165,6 @@ void Rasterizer::Draw() {
                     RasterizeTriangleMSAA(clip_triangle[i], viewspace_pos);
                 else
                     RasterizeTriangle(clip_triangle[i], viewspace_pos);
-
                 break;
             default:
                 break;
@@ -209,7 +208,19 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
                     FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(), interpolater_texcoords, texture ? &*texture : nullptr);
                     payload.view_pos = interpolater_shadingcoords;
                     frame_image_->SetDepth(x, y, z_interpolated);
-                    frame_image_->GetFrameBuffer()[id] = MathUtil::RGBToUint(fragment_shader(payload));
+                    
+                    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0; // 24.95
+                    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0; // 25.05
+                    Maths::Vector3f pixelPos = {(float)x, (float)y, z_interpolated};
+                    Maths::Vector3f tempPos = {pixelPos.x * 2 / width - 1, pixelPos.y * 2 / height - 1, (pixelPos.z - f2) / f1};
+                    float interpW = alpha * v[0].w + beta * v[1].w + gamma * v[2].w;
+                    tempPos.x *= interpW;
+                    tempPos.y *= interpW;
+                    tempPos.z *= interpW;
+                    Maths::Vector4f homoCoor = Maths::ToVector4f(tempPos, interpW);
+                    Maths::Vector4f worldPos = (projection * view * model).Invert() * homoCoor;
+                    bool isInLight = shadowMapping_->IsInLight(worldPos);
+                    frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(fragment_shader(payload)) : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
                 }
             }
         }
