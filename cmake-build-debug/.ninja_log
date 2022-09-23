@@ -1,0 +1,18 @@
+# ninja log v5
+8	631	6855236959968164	CMakeFiles/SoftRender.dir/math/Vector.cpp.obj	d81e4477ea6b2fdb
+0	691	6855236960566550	CMakeFiles/SoftRender.dir/math/Matrix.cpp.obj	adf9bc95806b8c05
+32	1050	6855236964166939	CMakeFiles/SoftRender.dir/core/ObjLoader.cpp.obj	5c705f30542886fc
+4	1083	6855236964496045	CMakeFiles/SoftRender.dir/core/Triangle.cpp.obj	c9beecf0c57dee71
+35	1102	6855236964685550	CMakeFiles/SoftRender.dir/core/Camera.cpp.obj	48602c1231b9055d
+16	1105	6855236964725465	CMakeFiles/SoftRender.dir/core/Texture.cpp.obj	c83c66581418c2a0
+53	1211	6855236965742753	CMakeFiles/SoftRender.dir/core/ShadowMapping.cpp.obj	ddef31c5e70f0305
+21	1241	6855236966061858	CMakeFiles/SoftRender.dir/core/Shader.cpp.obj	c8e2f7b8dc9b1069
+43	1251	6855236966171563	CMakeFiles/SoftRender.dir/math/MathUtil.cpp.obj	a8c84bb6e98e6c8a
+48	1312	6855236966760006	CMakeFiles/SoftRender.dir/core/FrameImage.cpp.obj	be22cd996d79745
+634	1509	6855236968784885	CMakeFiles/SoftRender.dir/core/RenderUtil.cpp.obj	e0cc7ff30160d7ce
+11	2177	6855236975446792	CMakeFiles/SoftRender.dir/main.cpp.obj	ac1c51f082fe7d60
+691	2371	6855236977401842	CMakeFiles/SoftRender.dir/platforms/Win32.cpp.obj	75c8814a66369b0e
+27	2505	6855236978588649	CMakeFiles/SoftRender.dir/core/Rasterizer.cpp.obj	56d01b9492b61173
+2506	2896	6855236982581569	SoftRender.exe	57238f2d06118f60
+2	576	6855240454192954	CMakeFiles/SoftRender.dir/core/ShadowMapping.cpp.obj	ddef31c5e70f0305
+576	741	6855240455814146	SoftRender.exe	57238f2d06118f60

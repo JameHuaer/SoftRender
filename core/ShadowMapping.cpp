@@ -1,9 +1,10 @@
 #include "ShadowMapping.h"
+
 ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity) {
     // model
     model_ = Maths::Matrix4f::Identity();
     // view
-    Maths::Matrix4f view_ = Maths::Matrix4f::Identity();
+    view_ = Maths::Matrix4f::Identity();
 
     Maths::Matrix4f translate;
     translate = {{{1, 0, 0, 0},
@@ -45,6 +46,7 @@ ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity
 
 ShadowMapping::~ShadowMapping() {
 }
+
 void ShadowMapping::InitZBuffer() {
     z_buffer = new float *[height]; // width*height;
     for (int i = 0; i < height; ++i) {
@@ -54,6 +56,7 @@ void ShadowMapping::InitZBuffer() {
         }
     }
 }
+
 void ShadowMapping::Resize(int newWight, int newHeight) {
     //宽高resize
     //创建一个新的二维数组
@@ -97,19 +100,23 @@ void ShadowMapping::Resize(int newWight, int newHeight) {
     width = newWight;
     height = newHeight;
 }
+
 float ShadowMapping::GetDepth(int x, int y) const {
     if (x >= 0 && x < width && y >= 0 && y < height)
         return z_buffer[y][x];
     return 1.0f;
 }
+
 void ShadowMapping::SetDepth(int x, int y, float z) {
     if (x >= 0 && x < width && y >= 0 && y < height)
         z_buffer[y][x] = z;
 }
+
 int ShadowMapping::GetIndex(int x, int y) {
     return (height - y - 1) * width + x - 1;
     // return width * y + x;
 }
+
 bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
     float f1 = (z_far - z_near) / 2.0; // 24.95
     float f2 = (z_far + z_near) / 2.0; // 25.05
@@ -124,19 +131,20 @@ bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
     tempPos.z = tempPos.z * f1 + f2;
     return tempPos.z + 0.000001 <= GetDepth(tempPos.x, tempPos.y);
 }
+
 void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList) {
-    float f1 = (z_far - z_near) / 2.0; // 24.95
-    float f2 = (z_far + z_near) / 2.0; // 25.05
+    float f1 = (z_far - z_near) / 2.0f; // 24.95
+    float f2 = (z_far + z_near) / 2.0f; // 25.05
     Maths::Matrix4f mvp = projection_ * view_ * model_;
 
-    for (const auto &t : triganleList) {
+    for (const auto &t: triganleList) {
         Triangle newtri = *t;
 
         //计算视口矩阵
         std::array<Maths::Vector4f, 3> mm{
-            (view_ * model_ * t->v[0]),
-            (view_ * model_ * t->v[1]),
-            (view_ * model_ * t->v[2])};
+                (view_ * model_ * t->v[0]),
+                (view_ * model_ * t->v[1]),
+                (view_ * model_ * t->v[2])};
         //保存视口坐标
         std::array<Maths::Vector3f, 3> viewspace_pos;
         viewspace_pos[0] = mm[0].head3();
@@ -159,13 +167,13 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
         //法线
         Maths::Matrix4f inv_trans = (view_ * model_).Invert().Transpose();
         Maths::Vector4f n[] = {
-            inv_trans * Maths::ToVector4f(newtri.normal[0], 0.0f),
-            inv_trans * Maths::ToVector4f(newtri.normal[1], 0.0f),
-            inv_trans * Maths::ToVector4f(newtri.normal[2], 0.0f)};
+                inv_trans * Maths::ToVector4f(newtri.normal[0], 0.0f),
+                inv_trans * Maths::ToVector4f(newtri.normal[1], 0.0f),
+                inv_trans * Maths::ToVector4f(newtri.normal[2], 0.0f)};
         // Viewport transformation 视口变换
         for (int j = 0; j < 3; ++j) {
-            newtri.v[j].x = 0.5 * width * (newtri.v[j].x + 1.0);
-            newtri.v[j].y = 0.5 * height * (newtri.v[j].y + 1.0);
+            newtri.v[j].x = 0.5f * width * (newtri.v[j].x + 1.0);
+            newtri.v[j].y = 0.5f * height * (newtri.v[j].y + 1.0);
             newtri.v[j].z = newtri.v[j].z * f1 + f2;
         }
         // view space normal
@@ -177,7 +185,7 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
 
         auto v = newtri.toVector4(); //所有顶点的w值都设为1
         float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
-        for (const auto &k : v) {
+        for (const auto &k: v) {
             lmin = (std::min)(lmin, k.x);
             rmax = (std::max)(rmax, k.x);
             bmin = (std::min)(bmin, k.y);
@@ -195,7 +203,7 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
                     continue;
                 if (MathUtil::InsideTriangle(x, y, newtri.v)) {
                     std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5, y + 0.5, newtri.v);
-                    float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
+                    float w_reciprocal = 1.0f / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
                     float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                     z_interpolated *= w_reciprocal;
                     if (z_interpolated < GetDepth(x, y))
