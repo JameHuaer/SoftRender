@@ -24,6 +24,7 @@ public:
     Maths::Matrix4f model_;
     Maths::Matrix4f projection_;
     Maths::Matrix4f mvp_;
+    Maths::Vector3f LightDirection;
     float fov = 45.0f;
     float aspect_radio = 1.0f;
     float z_near = 0.1f;

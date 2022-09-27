@@ -8,11 +8,11 @@
 #include <fstream>
 #include <math.h>
 #include <vector>
+
 using namespace rst;
 // std::ofstream outFile("./Debug.txt");
 
-Rasterizer::Rasterizer(int w, int h)
-    : width(w), height(h), frame_image_(new FrameImage(w, h)), camera_(new Camera()) {
+Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new FrameImage(w, h)), camera_(new Camera()) {
     win32_platform_ = new PlatForms::Win32Platform(camera_);
     //加载模型
     std::string obj_path = R"(../models/spot_triangulated_good.obj)";
@@ -24,9 +24,16 @@ Rasterizer::Rasterizer(int w, int h)
 
     // floor 注意：三角形顺序该项目是逆时针索引，不然会着色在背面。
     float florrScale = 2.0f;
-    Maths::Vector3f verts[4] = {{-1 * florrScale, -1, -1 * florrScale}, {1 * florrScale, -1, -1 * florrScale}, {1 * florrScale, -1, 1 * florrScale}, {-1 * florrScale, -1, 1 * florrScale}}; //顶点
-    uint32_t vertIndex[6] = {0, 3, 2, 0, 2, 1};                                                                                                                                              //三角形索引
-    Maths::Vector2f st[4] = {{0, 1}, {1, 1}, {1, 0}, {0, 0}};                                                                                                                                //
+    Maths::Vector3f verts[4] = {{-1 * florrScale, -1, -1 * florrScale},
+                                {1 * florrScale,  -1, -1 * florrScale},
+                                {1 * florrScale,  -1, 1 * florrScale},
+                                {-1 * florrScale, -1, 1 * florrScale}}; //顶点
+    uint32_t vertIndex[6] = {0, 3, 2, 0, 2,
+                             1};                                                                                                                                              //三角形索引
+    Maths::Vector2f st[4] = {{0, 1},
+                             {1, 1},
+                             {1, 0},
+                             {0, 0}};                                                                                                                                //
     for (int i = 0; i < 2; ++i) {
         Triangle *triangleFloor = new Triangle();
         for (int j = 0; j < 3; j++) {
@@ -64,41 +71,36 @@ Rasterizer::Rasterizer(int w, int h)
     fill_mode = kSolide;
     IsUseMSAA = false;
 }
+
 void Rasterizer::Update() {
     frame_image_->ClearBuffer(Maths::Vector4f{0.6, 0.6, 0.6}); //设置背景色
     SetModel(camera_->GetModelMatrix());
     SetView(camera_->GetViewMatrix());
     SetProjection(camera_->GetProjectionMatrix());
-    // TODO: 更新光源深度图。
+    // 更新光源深度图。
     shadowMapping_->UpdateShadowMappingDepth(triangle_list_);
 }
 
 void Rasterizer::Render() {
     Draw();
 }
-void Rasterizer::CalculateLightZBuffer() {
-    auto l1 = Light{{20, 20, 20}, {500, 500, 500}};
-    auto l2 = Light{{-20, 20, 0}, {500, 500, 500}};
-    std::vector<Light> lights = {l2};
-    for (auto &light : lights) {
-    }
-}
+
 void Rasterizer::Draw() {
 
-    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0; // 24.95
-    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0; // 25.05
+    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
+    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
 
     Maths::Matrix4f mvp = projection * view * model;
     std::vector<Triangle> clip_triangle;
 
-    for (const auto &t : triangle_list_) {
+    for (const auto &t: triangle_list_) {
         Triangle newtri = *t;
 
         //计算视口矩阵
         std::array<Maths::Vector4f, 3> mm{
-            (view * model * t->v[0]),
-            (view * model * t->v[1]),
-            (view * model * t->v[2])};
+                (view * model * t->v[0]),
+                (view * model * t->v[1]),
+                (view * model * t->v[2])};
         //保存视口坐标
         std::array<Maths::Vector3f, 3> viewspace_pos;
         viewspace_pos[0] = mm[0].head3();
@@ -138,13 +140,13 @@ void Rasterizer::Draw() {
             //法线
             Maths::Matrix4f inv_trans = (view * model).Invert().Transpose();
             Maths::Vector4f n[] = {
-                inv_trans * Maths::ToVector4f(clip_triangle[i].normal[0], 0.0f),
-                inv_trans * Maths::ToVector4f(clip_triangle[i].normal[1], 0.0f),
-                inv_trans * Maths::ToVector4f(clip_triangle[i].normal[2], 0.0f)};
+                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[0], 0.0f),
+                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[1], 0.0f),
+                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[2], 0.0f)};
             // Viewport transformation 视口变换
             for (int j = 0; j < 3; ++j) {
-                clip_triangle[i].v[j].x = 0.5 * width * (clip_triangle[i].v[j].x + 1.0);
-                clip_triangle[i].v[j].y = 0.5 * height * (clip_triangle[i].v[j].y + 1.0);
+                clip_triangle[i].v[j].x = 0.5f * width * (clip_triangle[i].v[j].x + 1.0);
+                clip_triangle[i].v[j].y = 0.5f * height * (clip_triangle[i].v[j].y + 1.0);
                 clip_triangle[i].v[j].z = clip_triangle[i].v[j].z * f1 + f2;
             }
             // view space normal
@@ -155,30 +157,31 @@ void Rasterizer::Draw() {
             clip_triangle[i].setColor(2, 148, 121.0, 92.0);
 
             switch (fill_mode) {
-            case kWireFrame:
-                DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[1].head3());
-                DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[2].head3());
-                DrawLine(clip_triangle[i].v[1].head3(), clip_triangle[i].v[2].head3());
-                break;
-            case kSolide:
-                if (IsUseMSAA)
-                    RasterizeTriangleMSAA(clip_triangle[i], viewspace_pos);
-                else
-                    RasterizeTriangle(clip_triangle[i], viewspace_pos);
-                break;
-            default:
-                break;
+                case kWireFrame:
+                    DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[1].head3());
+                    DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[2].head3());
+                    DrawLine(clip_triangle[i].v[1].head3(), clip_triangle[i].v[2].head3());
+                    break;
+                case kSolide:
+                    if (IsUseMSAA)
+                        RasterizeTriangleMSAA(clip_triangle[i], viewspace_pos);
+                    else
+                        RasterizeTriangle(clip_triangle[i], viewspace_pos);
+                    break;
+                default:
+                    break;
             }
         }
         clip_triangle.clear();
     }
 }
+
 // 屏幕空间光栅化，光栅化三角形。
 void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Vector3f, 3> &view_pos) {
 
     auto v = t.toVector4(); //所有顶点的w值都设为1
     float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
-    for (const auto &k : v) {
+    for (const auto &k: v) {
         lmin = (std::min)(lmin, k.x);
         rmax = (std::max)(rmax, k.x);
         bmin = (std::min)(bmin, k.y);
@@ -200,27 +203,36 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
                 float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                 z_interpolated *= w_reciprocal;
                 if (z_interpolated < frame_image_->GetDepth(x, y)) {
-                    auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);                    //颜色插值
-                    auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);                //法向量插值
-                    auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
-                    auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);         //着色点坐标插值
+                    auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1],
+                                                                    t.color[2], 1);                    //颜色插值
+                    auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1],
+                                                                     t.normal[2], 1);                //法向量插值
+                    auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0],
+                                                                        t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
+                    auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0],
+                                                                            view_pos[1], view_pos[2],
+                                                                            1);         //着色点坐标插值
 
-                    FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(), interpolater_texcoords, texture ? &*texture : nullptr);
+                    FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(),
+                                                  interpolater_texcoords, texture ? &*texture : nullptr);
                     payload.view_pos = interpolater_shadingcoords;
                     frame_image_->SetDepth(x, y, z_interpolated);
-                    
-                    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0; // 24.95
-                    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0; // 25.05
-                    Maths::Vector3f pixelPos = {(float)x, (float)y, z_interpolated};
-                    Maths::Vector3f tempPos = {pixelPos.x * 2 / width - 1, pixelPos.y * 2 / height - 1, (pixelPos.z - f2) / f1};
+                    //摄像机屏幕坐标转世界坐标
+                    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
+                    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
+                    Maths::Vector3f pixelPos = {(float) x, (float) y, z_interpolated};
+                    Maths::Vector3f tempPos = {pixelPos.x * 2 / (float) width - 1, pixelPos.y * 2 / (float) height - 1,
+                                               (pixelPos.z - f2) / f1};
                     float interpW = alpha * v[0].w + beta * v[1].w + gamma * v[2].w;
                     tempPos.x *= interpW;
                     tempPos.y *= interpW;
                     tempPos.z *= interpW;
                     Maths::Vector4f homoCoor = Maths::ToVector4f(tempPos, interpW);
-                    Maths::Vector4f worldPos = (projection * view * model).Invert() * homoCoor;
+                    Maths::Matrix4f mvpInvert = (projection * view * model).Invert();
+                    Maths::Vector4f worldPos = mvpInvert * homoCoor;
                     bool isInLight = shadowMapping_->IsInLight(worldPos);
-                    frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(fragment_shader(payload)) : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
+                    frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(fragment_shader(payload))
+                                                                   : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
                 }
             }
         }
@@ -232,7 +244,7 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
 
     auto v = t.toVector4(); //所有顶点的w值都设为1
     float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
-    for (const auto &k : v) {
+    for (const auto &k: v) {
         lmin = (std::min)(lmin, k.x);
         rmax = (std::max)(rmax, k.x);
         bmin = (std::min)(bmin, k.y);
@@ -249,30 +261,39 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
             int sample_k = 0;
             int id = frame_image_->GetIndex(x, y);
 
-            float delta_msaa_rate = 1 / sqrt(frame_image_->MSAA_rate);
+            float delta_msaa_rate = 1.0f / sqrt(frame_image_->MSAA_rate);
             //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
             if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
                 continue;
             id *= frame_image_->MSAA_rate;
 
-            for (float inner_x = delta_msaa_rate / 2.0; inner_x < 1; inner_x += delta_msaa_rate) {
-                for (float inner_y = delta_msaa_rate / 2.0; inner_y < 1; inner_y += delta_msaa_rate, ++sample_k) {
+            for (float inner_x = delta_msaa_rate / 2.0f; inner_x < 1; inner_x += delta_msaa_rate) {
+                for (float inner_y = delta_msaa_rate / 2.0f; inner_y < 1; inner_y += delta_msaa_rate, ++sample_k) {
                     // for (float inner_x = 0.25; inner_x < 1; inner_x += 0.5) {
                     //     for (float inner_y = 0.25; inner_y < 1; inner_y += 0.5, ++sample_k) {
                     float point_x = x + inner_x;
                     float point_y = y + inner_y;
                     if (MathUtil::InsideTriangle(point_x, point_y, t.v)) {
                         std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(point_x, point_y, t.v);
-                        float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
-                        float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
+                        float w_reciprocal = 1.0f / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
+                        float z_interpolated =
+                                alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                         z_interpolated *= w_reciprocal;
                         if (z_interpolated < frame_image_->z_sample_buffer[id + sample_k]) {
-                            auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);                    //颜色插值
-                            auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);                //法向量插值
-                            auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
-                            auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);         //着色点坐标插值
+                            auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1],
+                                                                            t.color[2], 1);                    //颜色插值
+                            auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0],
+                                                                             t.normal[1], t.normal[2],
+                                                                             1);                //法向量插值
+                            auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0],
+                                                                                t.tex_coords[1], t.tex_coords[2],
+                                                                                1); //纹理坐标插值
+                            auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0],
+                                                                                    view_pos[1], view_pos[2],
+                                                                                    1);         //着色点坐标插值
 
-                            FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(), interpolater_texcoords, texture ? &*texture : nullptr);
+                            FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(),
+                                                          interpolater_texcoords, texture ? &*texture : nullptr);
                             payload.view_pos = interpolater_shadingcoords;
                             frame_image_->z_sample_buffer[id + sample_k] = z_interpolated;
                             frame_image_->frame_sample_buffer[id + sample_k] = fragment_shader(payload) / 4;
@@ -290,6 +311,7 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
         }
     }
 }
+
 // Bresenham's line drawing algorithm
 void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     float x0 = begin.x;
@@ -316,9 +338,11 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     for (int x = x0; x <= x1; x++) {
         if (steep) {
             // [0,width-1],[0,height-1]
-            frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x), MathUtil::RGBToUint(line_color));
+            frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x),
+                                    MathUtil::RGBToUint(line_color));
         } else {
-            frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y), MathUtil::RGBToUint(line_color));
+            frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y),
+                                    MathUtil::RGBToUint(line_color));
         }
         error2 += derror2;
         if (error2 > dx) {
@@ -343,6 +367,7 @@ bool Rasterizer::IsClipSimple(const Triangle &t) {
     }
     return false;
 }
+
 int Rasterizer::ComputeOutCode(double x, double y, double z, double w) {
     //判断顶点区域码
     int code = ClipOutCode::kInside; // x,y,z==w 也算在里面
@@ -364,7 +389,9 @@ int Rasterizer::ComputeOutCode(double x, double y, double z, double w) {
 void Rasterizer::GetCrossVertex(const Triangle &tri, std::vector<VertexData> &res) {
 
     std::vector<int> indices = {0, 1, 2, 0};
-    std::pair<int, bool> isVertexPush[3] = {{0, false}, {1, false}, {2, false}}; //保存该顶点是否储存到res状态
+    std::pair<int, bool> isVertexPush[3] = {{0, false},
+                                            {1, false},
+                                            {2, false}}; //保存该顶点是否储存到res状态
     //边角点坐标，左手系
     const Maths::Vector3f top_right_vextex = {1, 1, 0};
     const Maths::Vector3f top_left_vextex = {-1, 1, 0};
@@ -423,7 +450,8 @@ void Rasterizer::GetCrossVertex(const Triangle &tri, std::vector<VertexData> &re
                 // TODO:没有考虑两点都在外面，且与正方体不相交的情况
             } else {
                 //找出在界外的点
-                if (is_top_right_inside && (v0.vertex.y > 1.0f && v1.vertex.x > 1.0f || v1.vertex.y > 1.0f && v0.vertex.x > 1.0f)) {
+                if (is_top_right_inside &&
+                    (v0.vertex.y > 1.0f && v1.vertex.x > 1.0f || v1.vertex.y > 1.0f && v0.vertex.x > 1.0f)) {
                     int aa = 1;
                 }
                 int outcodeOut = outcode0 ? outcode0 : outcode1; // outcodeOut是在外头点的编码
@@ -502,20 +530,26 @@ void Rasterizer::IsCohenSutherLandClip(const Triangle &tri, std::vector<Triangle
         t_out.push_back(temp);
     }
 }
+
 void Rasterizer::LerpAndPushVertex(const Triangle &tri, const Maths::Vector3f &v, std::vector<VertexData> &res) {
     float alpha, beta, gamma;
     std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(v.x, v.y, tri.v);
-    Maths::Vector4f interpolater_vertex = MathUtil::Interpolate(alpha, beta, gamma, tri.v[0], tri.v[1], tri.v[2], 1); //法向量插值
+    Maths::Vector4f interpolater_vertex = MathUtil::Interpolate(alpha, beta, gamma, tri.v[0], tri.v[1], tri.v[2],
+                                                                1); //法向量插值
     interpolater_vertex.x = v.x;
     interpolater_vertex.y = v.y;
-    Maths::Vector3f interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, tri.normal[0], tri.normal[1], tri.normal[2], 1);                //法向量插值
-    Maths::Vector2f interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, tri.tex_coords[0], tri.tex_coords[1], tri.tex_coords[2], 1); //纹理坐标插值
+    Maths::Vector3f interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, tri.normal[0], tri.normal[1],
+                                                                tri.normal[2], 1);                //法向量插值
+    Maths::Vector2f interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, tri.tex_coords[0],
+                                                                   tri.tex_coords[1], tri.tex_coords[2], 1); //纹理坐标插值
     res.push_back(VertexData{interpolater_vertex, interpolater_normal, interpolater_texcoords});
 }
+
 //左手坐标系
 void ComputeRadianFromXPositive(const Maths::Vector3f &point) {
     Maths::Vector3f x_positive{1, 0, 0};
 }
+
 void Rasterizer::SetModel(const Maths::Matrix4f &m) {
     model = m;
 }
@@ -535,9 +569,11 @@ void Rasterizer::SetVertexShader(std::function<Maths::Vector3f(VertexShaderPaylo
 void Rasterizer::SetFragmentShader(std::function<Maths::Vector3f(FragmentShaderPayload)> frag_shader) {
     fragment_shader = frag_shader;
 }
+
 void Rasterizer::SetTexture(Texture2D tex) {
     texture = tex;
 }
+
 uint32_t *&Rasterizer::GetFrameBuffer() {
     return frame_image_->GetFrameBuffer();
 }

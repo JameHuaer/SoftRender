@@ -1,25 +1,17 @@
 #include "ShadowMapping.h"
 
 ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity) {
+    LightDirection = position;
     // model
     model_ = Maths::Matrix4f::Identity();
     // view
-    view_ = Maths::Matrix4f::Identity();
-
-    Maths::Matrix4f translate;
-    translate = {{{1, 0, 0, 0},
-                  {0, 1, 0, 0},
-                  {0, 0, 1, 0},
-                  {-position.x, -position.y, -position.z, 1}}};
-
-    view_ = translate * view_;
+    view_ = LookAt(position, Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
     // projection
-    Maths::Matrix4f projection_ = Maths::Matrix4f::Identity();
-    Maths::Matrix4f persp_to_ortho;
-    persp_to_ortho = {{{z_near, 0, 0, 0},
-                       {0, z_near, 0, 0},
-                       {0, 0, z_near + z_far, 1},
-                       {0, 0, -z_near * z_far, 0}}};
+    projection_ = Maths::Matrix4f::Identity();
+    Maths::Matrix4f persp_to_ortho = {{{z_near, 0, 0, 0},
+                                       {0, z_near, 0, 0},
+                                       {0, 0, z_near + z_far, 1},
+                                       {0, 0, -z_near * z_far, 0}}};
 
     float half_eye_angle_radian = (fov / 2.0 / 180.0) * MY_PI;
 
@@ -27,17 +19,14 @@ ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity
     float r = t * aspect_radio;
     float b = -t;
     float l = -r;
-    Maths::Matrix4f m_ortho_scale;
-    m_ortho_scale = {{{2 / (r - l), 0, 0, 0},
-                      {0, 2 / (t - b), 0, 0},
-                      {0, 0, 2 / (z_near - z_far), 0},
-                      {0, 0, 0, 1}}};
-    Maths::Matrix4f m_ortho_trans;
-
-    m_ortho_trans = {{{1, 0, 0, 0},
-                      {0, 1, 0, 0},
-                      {0, 0, 1, 0},
-                      {-(r + l) / 2, -(b + t) / 2, -(z_near + z_far) / 2.0f, 1}}};
+    Maths::Matrix4f m_ortho_scale = {{{2 / (r - l), 0, 0, 0},
+                                      {0, 2 / (t - b), 0, 0},
+                                      {0, 0, 2 / (z_near - z_far), 0},
+                                      {0, 0, 0, 1}}};
+    Maths::Matrix4f m_ortho_trans = {{{1, 0, 0, 0},
+                                      {0, 1, 0, 0},
+                                      {0, 0, 1, 0},
+                                      {-(r + l) / 2, -(b + t) / 2, -(z_near + z_far) / 2.0f, 1}}};
     projection_ = m_ortho_scale * m_ortho_trans * persp_to_ortho * projection_;
     // mvp
     mvp_ = projection_ * view_ * model_;
@@ -129,14 +118,16 @@ bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
     tempPos.x = 0.5 * width * (tempPos.x + 1.0);
     tempPos.y = 0.5 * height * (tempPos.y + 1.0);
     tempPos.z = tempPos.z * f1 + f2;
-    return tempPos.z + 0.000001 <= GetDepth(tempPos.x, tempPos.y);
+    float lightDepth = GetDepth(tempPos.x, tempPos.y);
+    float lessShadowBias = 0.001f;
+    float fixedBias = 0.000001f;
+    return tempPos.z <= lightDepth + lessShadowBias;
 }
 
 void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList) {
     float f1 = (z_far - z_near) / 2.0f; // 24.95
     float f2 = (z_far + z_near) / 2.0f; // 25.05
     Maths::Matrix4f mvp = projection_ * view_ * model_;
-
     for (const auto &t: triganleList) {
         Triangle newtri = *t;
 
