@@ -17,6 +17,7 @@ static const wchar_t *const g_title = L"SoftRender"; //窗口标题
 int g_width = 800;                                   //窗口大小
 int g_height = 600;
 bool isResizing = false;
+
 //声明函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -43,7 +44,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     wce.hIcon = LoadIcon(NULL, IDI_APPLICATION);    //大图标
     wce.hIconSm = wce.hIcon;                        //小图标
     wce.hCursor = LoadCursor(NULL, IDC_ARROW);      //光标
-    wce.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1); //背景色
+    wce.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1); //背景色
     wce.lpszMenuName = nullptr;                     //菜单
     wce.lpszClassName = cls_name;                   //窗口类的名称
 
@@ -87,13 +88,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
             raster->Render();
             InvalidateRect(hWnd, nullptr, true);
             UpdateWindow(hWnd);
-            // todo
-            // update render;
-            // Render::update(hWnd);
         }
     }
     return msg.wParam;
 }
+
 //窗口消息处理函数
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     PAINTSTRUCT ps;
@@ -107,51 +106,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     static void *s_pData;
 
     switch (uMsg) {
-    case WM_CREATE: {
-        //模型初始化
-        //初始化设备无关位图header
-        BITMAPINFOHEADER bmphdr = {0};
-        bmphdr.biSize = sizeof(BITMAPINFOHEADER);
-        bmphdr.biWidth = g_width;
-        bmphdr.biHeight = -g_height;
-        bmphdr.biPlanes = 1;
-        bmphdr.biBitCount = 32;
-        bmphdr.biSizeImage = g_height * g_width * 4;
-        //创建后缓冲区
-        //先创建一个内存dc
-        s_hdcBackbuffer = CreateCompatibleDC(nullptr);
-        //获得前置缓冲区dc
-        HDC hdc = GetDC(hWnd);
-
-        s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
-                                     reinterpret_cast<void **>(&raster->GetFrameBuffer()), nullptr, 0);
-
-        //将bitmap装入内存dc
-        s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
-        //释放dc
-        ReleaseDC(hWnd, hdc);
-    } break;
-    case WM_PAINT: {
-        hdc = BeginPaint(hWnd, &ps);
-        //把backbuffer内容传到frontbuffer
-        BitBlt(ps.hdc, 0, 0, g_width, g_height, s_hdcBackbuffer, 0, 0,
-               SRCCOPY);
-        EndPaint(hWnd, &ps);
-    } break;
-    case WM_ERASEBKGND:
-        return true;
-    case WM_ACTIVATE:
-
-        break;
-        //鼠标事件
-        //鼠标按下事件
-    case WM_LBUTTONDOWN:
-    case WM_RBUTTONDOWN:
-    case WM_MBUTTONDOWN:
-        // printf("button down: x: %d y: %d\n", GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)); // test
-
-        //如果g_width != width && g_height != height;那么就调整渲染窗口
-        if (g_width != raster->width && g_height != raster->height) {
+        case WM_CREATE: {
             //模型初始化
             //初始化设备无关位图header
             BITMAPINFOHEADER bmphdr = {0};
@@ -161,51 +116,105 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             bmphdr.biPlanes = 1;
             bmphdr.biBitCount = 32;
             bmphdr.biSizeImage = g_height * g_width * 4;
-            // delete m_model->GetFrameBuffer();
-            s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO)&bmphdr, DIB_RGB_COLORS,
+            //创建后缓冲区
+            //先创建一个内存dc
+            s_hdcBackbuffer = CreateCompatibleDC(nullptr);
+            //获得前置缓冲区dc
+            HDC hdc = GetDC(hWnd);
+
+            s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO) &bmphdr, DIB_RGB_COLORS,
                                          reinterpret_cast<void **>(&raster->GetFrameBuffer()), nullptr, 0);
+
             //将bitmap装入内存dc
-            s_hOldBitmap = (HBITMAP)SelectObject(s_hdcBackbuffer, s_hBitmap);
-            raster->Resize(g_width, g_height);
+            s_hOldBitmap = (HBITMAP) SelectObject(s_hdcBackbuffer, s_hBitmap);
+            //释放dc
+            ReleaseDC(hWnd, hdc);
         }
-        raster->win32_platform_->OnMouseDown(wParam, hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-        return 0;
-        //鼠标释放事件
-    case WM_LBUTTONUP:
-    case WM_RBUTTONUP:
-    case WM_MBUTTONUP:
-        raster->win32_platform_->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-        return 0;
-        //鼠标移动事件
-    case WM_MOUSEMOVE:
-        raster->win32_platform_->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_PAINT: {
+            hdc = BeginPaint(hWnd, &ps);
+            //把backbuffer内容传到frontbuffer
+            BitBlt(ps.hdc, 0, 0, g_width, g_height, s_hdcBackbuffer, 0, 0,
+                   SRCCOPY);
+            EndPaint(hWnd, &ps);
+        }
+            break;
+        case WM_ERASEBKGND:
+            return true;
+        case WM_ACTIVATE:
 
-        return 0;
-    case WM_MOUSEWHEEL:
-        raster->win32_platform_->OnScrollMove(wParam, GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
-        return 0;
-    case WM_SIZE:
-        // printf("button down: w: %d h: %d\n", g_width, g_height); // test
-        g_width = LOWORD(lParam);
-        g_height = HIWORD(lParam);
-        // TODO
-        //调整窗口大小，在结束调整后同步渲染。
-        //目前设计为：当缩放结束后并不会立刻渲染，而是将鼠标指针移动到窗口内点击一下之后才会。
-        return 0;
-    case WM_CLOSE:
-        DestroyWindow(hWnd);
-        break;
+            break;
+            //鼠标事件
+            //鼠标按下事件
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+            // printf("button down: x: %d y: %d\n", GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)); // test
 
-    case WM_DESTROY:
-        SelectObject(s_hdcBackbuffer, s_hOldBitmap);
-        DeleteDC(s_hdcBackbuffer);
-        DeleteObject(s_hOldBitmap);
-        PostQuitMessage(0);
-        break;
+            //如果g_width != width && g_height != height;那么就调整渲染窗口
+            if (g_width != raster->width && g_height != raster->height) {
+                //模型初始化
+                //初始化设备无关位图header
+                BITMAPINFOHEADER bmphdr = {0};
+                bmphdr.biSize = sizeof(BITMAPINFOHEADER);
+                bmphdr.biWidth = g_width;
+                bmphdr.biHeight = -g_height;
+                bmphdr.biPlanes = 1;
+                bmphdr.biBitCount = 32;
+                bmphdr.biSizeImage = g_height * g_width * 4;
+                // delete m_model->GetFrameBuffer();
+                s_hBitmap = CreateDIBSection(nullptr, (PBITMAPINFO) &bmphdr, DIB_RGB_COLORS,
+                                             reinterpret_cast<void **>(&raster->GetFrameBuffer()), nullptr, 0);
+                //将bitmap装入内存dc
+                s_hOldBitmap = (HBITMAP) SelectObject(s_hdcBackbuffer, s_hBitmap);
+                raster->Resize(g_width, g_height);
+            }
+            raster->win32_platform_->OnMouseDown(wParam, hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+            //鼠标释放事件
+        case WM_LBUTTONUP:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONUP:
+            raster->win32_platform_->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+            //鼠标移动事件
+        case WM_MOUSEMOVE:
+            raster->win32_platform_->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 
-    default:
+            return 0;
+        case WM_MOUSEWHEEL:
+            raster->win32_platform_->OnScrollMove(wParam, GET_WHEEL_DELTA_WPARAM(wParam) / (float) WHEEL_DELTA);
+            return 0;
+        case WM_KEYDOWN://right: 39, left: 37,down: 38, up: 40,
+        case WM_SYSKEYDOWN:
+            raster->win32_platform_->OnKeyBoardDown(wParam, true, hWnd);
+            break;
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+//            raster->win32_platform_->OnKeyBoardDown(wParam, false, hWnd);
+            break;
+        case WM_SIZE:
+            // printf("button down: w: %d h: %d\n", g_width, g_height); // test
+            g_width = LOWORD(lParam);
+            g_height = HIWORD(lParam);
+            // TODO
+            //调整窗口大小，在结束调整后同步渲染。
+            //目前设计为：当缩放结束后并不会立刻渲染，而是将鼠标指针移动到窗口内点击一下之后才会。
+            return 0;
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
+            break;
 
-        break;
+        case WM_DESTROY:
+            SelectObject(s_hdcBackbuffer, s_hOldBitmap);
+            DeleteDC(s_hdcBackbuffer);
+            DeleteObject(s_hOldBitmap);
+            PostQuitMessage(0);
+            break;
+
+        default:
+
+            break;
     }
 
     return DefWindowProc(hWnd, uMsg, wParam, lParam);

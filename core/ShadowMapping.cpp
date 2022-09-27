@@ -1,11 +1,12 @@
 #include "ShadowMapping.h"
 
-ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity) {
-    LightDirection = position;
-    // model
+Maths::Vector3f LightDirection_{-20, 20, 0};
+
+ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity) : rotate_angle_(0, 0, 0) {
+    LightDirection_ = position;
+    //model
     model_ = Maths::Matrix4f::Identity();
-    // view
-    view_ = LookAt(position, Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
+
     // projection
     projection_ = Maths::Matrix4f::Identity();
     Maths::Matrix4f persp_to_ortho = {{{z_near, 0, 0, 0},
@@ -28,12 +29,14 @@ ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity
                                       {0, 0, 1, 0},
                                       {-(r + l) / 2, -(b + t) / 2, -(z_near + z_far) / 2.0f, 1}}};
     projection_ = m_ortho_scale * m_ortho_trans * persp_to_ortho * projection_;
-    // mvp
-    mvp_ = projection_ * view_ * model_;
     InitZBuffer();
 }
 
 ShadowMapping::~ShadowMapping() {
+    if (z_buffer)
+        for (int i = 0; i < height; ++i) {
+            delete[] z_buffer[i];
+        }
 }
 
 void ShadowMapping::InitZBuffer() {
@@ -107,16 +110,16 @@ int ShadowMapping::GetIndex(int x, int y) {
 }
 
 bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
-    float f1 = (z_far - z_near) / 2.0; // 24.95
-    float f2 = (z_far + z_near) / 2.0; // 25.05
+    float f1 = (z_far - z_near) / 2.0f; // 24.95
+    float f2 = (z_far + z_near) / 2.0f; // 25.05
     Maths::Vector2f result;
     Maths::Vector4f tempWorldPos = worldPos;
     Maths::Vector4f tempPos = mvp_ * tempWorldPos;
     tempPos.x /= tempPos.w;
     tempPos.y /= tempPos.w;
     tempPos.z /= tempPos.w;
-    tempPos.x = 0.5 * width * (tempPos.x + 1.0);
-    tempPos.y = 0.5 * height * (tempPos.y + 1.0);
+    tempPos.x = 0.5f * width * (tempPos.x + 1.0);
+    tempPos.y = 0.5f * height * (tempPos.y + 1.0);
     tempPos.z = tempPos.z * f1 + f2;
     float lightDepth = GetDepth(tempPos.x, tempPos.y);
     float lessShadowBias = 0.001f;
@@ -127,7 +130,7 @@ bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
 void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList) {
     float f1 = (z_far - z_near) / 2.0f; // 24.95
     float f2 = (z_far + z_near) / 2.0f; // 25.05
-    Maths::Matrix4f mvp = projection_ * view_ * model_;
+    Maths::Matrix4f mvp = mvp_;;
     for (const auto &t: triganleList) {
         Triangle newtri = *t;
 
@@ -137,7 +140,7 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
                 (view_ * model_ * t->v[1]),
                 (view_ * model_ * t->v[2])};
         //保存视口坐标
-        std::array<Maths::Vector3f, 3> viewspace_pos;
+        std::array<Maths::Vector3f, 3> viewspace_pos{};
         viewspace_pos[0] = mm[0].head3();
         viewspace_pos[1] = mm[1].head3();
         viewspace_pos[2] = mm[2].head3();
@@ -150,30 +153,17 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
         newtri.v[2] = mvp * t->v[2];
 
         // Homogeneous division 透视除法
-        for (int i = 0; i < 3; ++i) {
-            newtri.v[i].x /= newtri.v[i].w;
-            newtri.v[i].y /= newtri.v[i].w;
-            newtri.v[i].z /= newtri.v[i].w;
+        for (auto &vertex: newtri.v) {
+            vertex.x /= vertex.w;
+            vertex.y /= vertex.w;
+            vertex.z /= vertex.w;
         }
-        //法线
-        Maths::Matrix4f inv_trans = (view_ * model_).Invert().Transpose();
-        Maths::Vector4f n[] = {
-                inv_trans * Maths::ToVector4f(newtri.normal[0], 0.0f),
-                inv_trans * Maths::ToVector4f(newtri.normal[1], 0.0f),
-                inv_trans * Maths::ToVector4f(newtri.normal[2], 0.0f)};
         // Viewport transformation 视口变换
-        for (int j = 0; j < 3; ++j) {
-            newtri.v[j].x = 0.5f * width * (newtri.v[j].x + 1.0);
-            newtri.v[j].y = 0.5f * height * (newtri.v[j].y + 1.0);
-            newtri.v[j].z = newtri.v[j].z * f1 + f2;
+        for (auto &vertex: newtri.v) {
+            vertex.x = 0.5f * width * (vertex.x + 1.0);
+            vertex.y = 0.5f * height * (vertex.y + 1.0);
+            vertex.z = vertex.z * f1 + f2;
         }
-        // view space normal
-        newtri.setNormals({n[0].head3(), n[1].head3(), n[2].head3()}); //向量缩小到3维
-
-        newtri.setColor(0, 148, 121.0, 92.0);
-        newtri.setColor(1, 148, 121.0, 92.0);
-        newtri.setColor(2, 148, 121.0, 92.0);
-
         auto v = newtri.toVector4(); //所有顶点的w值都设为1
         float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
         for (const auto &k: v) {
@@ -201,6 +191,40 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
                         SetDepth(x, y, z_interpolated);
                 }
             }
+        }
+    }
+}
+
+void ShadowMapping::UpdateMVPMatrix() {
+    Maths::Matrix4f rotation_x(Maths::Matrix4f::Identity()), rotation_y(Maths::Matrix4f::Identity());
+    if (rotate_angle_.x != 0)
+        rotation_x = {{{1, 0, 0, 0},
+                       {0, (float) cosf(rotate_angle_.x),
+                        (float) sinf(rotate_angle_.x), 0},
+                       {0, (float) (-sinf(rotate_angle_.x)),
+                        (float) cosf(rotate_angle_.x), 0},
+                       {0, 0, 0, 1}}};
+    if (rotate_angle_.y != 0)
+        rotation_y = {
+                {{(float) cosf(rotate_angle_.y), 0, (float) -sinf(rotate_angle_.y),
+                  0},
+                 {0, 1, 0, 0},
+                 {(float) (sinf(rotate_angle_.y)), 0, (float) cosf(rotate_angle_.y),
+                  0},
+                 {0, 0, 0, 1}}};
+    Maths::Matrix4f rotate = (rotation_x * rotation_y);
+    // view
+    LightDirection_ = (rotate * ToVector4f(LightDirection_, 1)).head3();
+    view_ = LookAt(LightDirection_, Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
+
+    // mvp
+    mvp_ = projection_ * view_ * model_;
+}
+
+void ShadowMapping::ClearZBuffer() {
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            z_buffer[y][x] = FLOAT_MAX;
         }
     }
 }

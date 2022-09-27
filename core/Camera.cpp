@@ -2,7 +2,6 @@
 #include "./RenderUtil.h"
 
 Maths::Matrix4f Camera::GetViewMatrix() {
-
     view_ = LookAt(position_.head3(), Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
     return view_;
 }

@@ -23,11 +23,11 @@ Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new Fra
     // std::string texture_path = R"(../models/hmap.bmp)";
 
     // floor 注意：三角形顺序该项目是逆时针索引，不然会着色在背面。
-    float florrScale = 2.0f;
-    Maths::Vector3f verts[4] = {{-1 * florrScale, -1, -1 * florrScale},
-                                {1 * florrScale,  -1, -1 * florrScale},
-                                {1 * florrScale,  -1, 1 * florrScale},
-                                {-1 * florrScale, -1, 1 * florrScale}}; //顶点
+    float floorScale = 4.0f;
+    Maths::Vector3f verts[4] = {{-1 * floorScale, -1, -1 * floorScale},
+                                {1 * floorScale,  -1, -1 * floorScale},
+                                {1 * floorScale,  -1, 1 * floorScale},
+                                {-1 * floorScale, -1, 1 * floorScale}}; //顶点
     uint32_t vertIndex[6] = {0, 3, 2, 0, 2,
                              1};                                                                                                                                              //三角形索引
     Maths::Vector2f st[4] = {{0, 1},
@@ -65,6 +65,7 @@ Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new Fra
     Maths::Vector3f lightPosition = {-20, 20, 0};
     Maths::Vector3f lightIntensity = {500, 500, 500};
     shadowMapping_ = new ShadowMapping(lightPosition, lightIntensity);
+    win32_platform_->SetShadowMapping(shadowMapping_);
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
@@ -77,7 +78,10 @@ void Rasterizer::Update() {
     SetModel(camera_->GetModelMatrix());
     SetView(camera_->GetViewMatrix());
     SetProjection(camera_->GetProjectionMatrix());
-    // 更新光源深度图。
+    // shadow mapping 更新
+//    shadowMapping_->rotate_angle_.y += 0.01f;
+    shadowMapping_->ClearZBuffer();
+    shadowMapping_->UpdateMVPMatrix();
     shadowMapping_->UpdateShadowMappingDepth(triangle_list_);
 }
 

@@ -38,7 +38,7 @@ public:
         : position_(pos), target_(tar), up_(u) {
     }
     Camera()
-        : Camera(Maths::Vector4f(0.0f, 0.0f, 10.0f, 0.0f), Maths::Vector4f(0.0f, 0.0f, 0.0f, 0.0f), Maths::Vector4f(0.0f, 1.0f, 0.0f, 0.0f)) {
+        : Camera(Maths::Vector4f(0.0f, 0.0f, 20.0f, 0.0f), Maths::Vector4f(0.0f, 0.0f, 0.0f, 0.0f), Maths::Vector4f(0.0f, 1.0f, 0.0f, 0.0f)) {
     }
     ~Camera() = default;
 
