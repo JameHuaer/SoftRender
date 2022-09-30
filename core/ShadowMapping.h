@@ -48,7 +48,6 @@ public:
     int width = 800;
     int height = 600;
     float **z_buffer; //帧图片深度信息缓存
-    // TODO: 计算摄像机像素坐标->空间坐标->光源像素坐标。
 };
 
 

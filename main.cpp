@@ -197,7 +197,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // printf("button down: w: %d h: %d\n", g_width, g_height); // test
             g_width = LOWORD(lParam);
             g_height = HIWORD(lParam);
-            // TODO
             //调整窗口大小，在结束调整后同步渲染。
             //目前设计为：当缩放结束后并不会立刻渲染，而是将鼠标指针移动到窗口内点击一下之后才会。
             return 0;

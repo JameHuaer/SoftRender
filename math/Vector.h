@@ -148,7 +148,6 @@ Vector<size1> embeded(const Vector<size2> &v, const float fill = 1) {
     }
     return result;
 }
-// todo proj
 //向量输出
 template <int size>
 std::ostream &operator<<(std::ostream &out, const Vector<size> v) {

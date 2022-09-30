@@ -45,8 +45,6 @@ Maths::Vector3f TextureFragmentShader(const FragmentShaderPayload &payload) {
     Maths::Vector3f amb_light_intensity{10, 10, 10};
     Maths::Vector3f eye_pos{0, 0, 10};
 
-    // TODO: l1和l2一左一右两束光线，实现shadow mapping 可能最好先取消一条光线，好实现，
-    //目前的思路是：地面设定为y = -1 首先使用光线到物体（像素点），生成一张深度图，然后从视点看向物体生成一张深度图，对比两张深度图，视点深度图数值大的则为黑色，否则为原来色。
     float p = 150;
 
     Maths::Vector3f color = texture_color;

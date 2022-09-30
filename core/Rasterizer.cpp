@@ -106,7 +106,7 @@ void Rasterizer::Draw() {
                 (view * model * t->v[1]),
                 (view * model * t->v[2])};
         //保存视口坐标
-        std::array<Maths::Vector3f, 3> viewspace_pos;
+        std::array<Maths::Vector3f, 3> viewspace_pos{};
         viewspace_pos[0] = mm[0].head3();
         viewspace_pos[1] = mm[1].head3();
         viewspace_pos[2] = mm[2].head3();
@@ -119,10 +119,10 @@ void Rasterizer::Draw() {
         newtri.v[2] = mvp * t->v[2];
 
         // Homogeneous division 透视除法
-        for (int i = 0; i < 3; ++i) {
-            newtri.v[i].x /= newtri.v[i].w;
-            newtri.v[i].y /= newtri.v[i].w;
-            newtri.v[i].z /= newtri.v[i].w;
+        for (auto &vertex: newtri.v) {
+            vertex.x /= vertex.w;
+            vertex.y /= vertex.w;
+            vertex.z /= vertex.w;
         }
 
         //简单CVV裁剪
@@ -139,38 +139,38 @@ void Rasterizer::Draw() {
         //然后经过视口变换以及法向量变换，重新设置顶点坐标和法向量
         IsCohenSutherLandClip(newtri, clip_triangle);
 
-        for (int i = 0; i < clip_triangle.size(); ++i) {
+        for (auto &triangle: clip_triangle) {
 
             //法线
             Maths::Matrix4f inv_trans = (view * model).Invert().Transpose();
             Maths::Vector4f n[] = {
-                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[0], 0.0f),
-                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[1], 0.0f),
-                    inv_trans * Maths::ToVector4f(clip_triangle[i].normal[2], 0.0f)};
+                    inv_trans * Maths::ToVector4f(triangle.normal[0], 0.0f),
+                    inv_trans * Maths::ToVector4f(triangle.normal[1], 0.0f),
+                    inv_trans * Maths::ToVector4f(triangle.normal[2], 0.0f)};
             // Viewport transformation 视口变换
             for (int j = 0; j < 3; ++j) {
-                clip_triangle[i].v[j].x = 0.5f * width * (clip_triangle[i].v[j].x + 1.0);
-                clip_triangle[i].v[j].y = 0.5f * height * (clip_triangle[i].v[j].y + 1.0);
-                clip_triangle[i].v[j].z = clip_triangle[i].v[j].z * f1 + f2;
+                triangle.v[j].x = 0.5f * width * (triangle.v[j].x + 1.0);
+                triangle.v[j].y = 0.5f * height * (triangle.v[j].y + 1.0);
+                triangle.v[j].z = triangle.v[j].z * f1 + f2;
             }
             // view space normal
-            clip_triangle[i].setNormals({n[0].head3(), n[1].head3(), n[2].head3()}); //向量缩小到3维
+            triangle.setNormals({n[0].head3(), n[1].head3(), n[2].head3()}); //向量缩小到3维
 
-            clip_triangle[i].setColor(0, 148, 121.0, 92.0);
-            clip_triangle[i].setColor(1, 148, 121.0, 92.0);
-            clip_triangle[i].setColor(2, 148, 121.0, 92.0);
+            triangle.setColor(0, 148, 121.0, 92.0);
+            triangle.setColor(1, 148, 121.0, 92.0);
+            triangle.setColor(2, 148, 121.0, 92.0);
 
             switch (fill_mode) {
                 case kWireFrame:
-                    DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[1].head3());
-                    DrawLine(clip_triangle[i].v[0].head3(), clip_triangle[i].v[2].head3());
-                    DrawLine(clip_triangle[i].v[1].head3(), clip_triangle[i].v[2].head3());
+                    DrawLine(triangle.v[0].head3(), triangle.v[1].head3());
+                    DrawLine(triangle.v[0].head3(), triangle.v[2].head3());
+                    DrawLine(triangle.v[1].head3(), triangle.v[2].head3());
                     break;
                 case kSolide:
                     if (IsUseMSAA)
-                        RasterizeTriangleMSAA(clip_triangle[i], viewspace_pos);
+                        RasterizeTriangleMSAA(triangle, viewspace_pos);
                     else
-                        RasterizeTriangle(clip_triangle[i], viewspace_pos);
+                        RasterizeTriangle(triangle, viewspace_pos);
                     break;
                 default:
                     break;
@@ -202,8 +202,8 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
             if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
                 continue;
             if (MathUtil::InsideTriangle(x, y, t.v)) {
-                std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5, y + 0.5, t.v);
-                float w_reciprocal = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
+                std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5f, y + 0.5f, t.v);
+                float w_reciprocal = 1.0f / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
                 float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                 z_interpolated *= w_reciprocal;
                 if (z_interpolated < frame_image_->GetDepth(x, y)) {
@@ -340,14 +340,10 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     int error2 = 0;
     int y = y0;
     for (int x = x0; x <= x1; x++) {
-        if (steep) {
-            // [0,width-1],[0,height-1]
-            frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x),
-                                    MathUtil::RGBToUint(line_color));
-        } else {
-            frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y),
-                                    MathUtil::RGBToUint(line_color));
-        }
+        if (steep)// [0,width-1],[0,height-1]
+            frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x), MathUtil::RGBToUint(line_color));
+        else
+            frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y), MathUtil::RGBToUint(line_color));
         error2 += derror2;
         if (error2 > dx) {
             y += (y1 > y0 ? 1 : -1);
@@ -521,7 +517,6 @@ void Rasterizer::GetCrossVertex(const Triangle &tri, std::vector<VertexData> &re
 
 void Rasterizer::IsCohenSutherLandClip(const Triangle &tri, std::vector<Triangle> &t_out) {
     std::vector<VertexData> vecs;
-    // TODO: 对vecs的顶点进行顺时针排序
     GetCrossVertex(tri, vecs);
     //对得到的顶点排序
     MathUtil::SortPoint(vecs);
