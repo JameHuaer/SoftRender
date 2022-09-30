@@ -29,7 +29,7 @@ public:
 
     int GetIndex(int x, int y);
 
-    bool IsInLight(const Maths::Vector4f &worldPos);
+    bool IsInLight(const Maths::Vector4f &worldPos, const Maths::Vector3f &Normal);
 
     void UpdateMVPMatrix();
 

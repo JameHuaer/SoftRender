@@ -234,7 +234,7 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
                     Maths::Vector4f homoCoor = Maths::ToVector4f(tempPos, interpW);
                     Maths::Matrix4f mvpInvert = (projection * view * model).Invert();
                     Maths::Vector4f worldPos = mvpInvert * homoCoor;
-                    bool isInLight = shadowMapping_->IsInLight(worldPos);
+                    bool isInLight = shadowMapping_->IsInLight(worldPos, interpolater_normal);
                     frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(fragment_shader(payload))
                                                                    : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
                 }

@@ -109,7 +109,7 @@ int ShadowMapping::GetIndex(int x, int y) {
     // return width * y + x;
 }
 
-bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
+bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos, const Maths::Vector3f &Normal) {
     float f1 = (z_far - z_near) / 2.0f; // 24.95
     float f2 = (z_far + z_near) / 2.0f; // 25.05
     Maths::Vector2f result;
@@ -122,9 +122,8 @@ bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos) {
     tempPos.y = 0.5f * height * (tempPos.y + 1.0);
     tempPos.z = tempPos.z * f1 + f2;
     float lightDepth = GetDepth(tempPos.x, tempPos.y);
-    float lessShadowBias = 0.001f;
-    float fixedBias = 0.000001f;
-    return tempPos.z <= lightDepth + lessShadowBias;
+    float bias = std::fmax(0.05f * (1.0f - Normal.Dot(LightDirection_)), 0.001f);
+    return tempPos.z <= lightDepth + bias;
 }
 
 void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList) {
