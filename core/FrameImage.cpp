@@ -1,4 +1,5 @@
 #include "FrameImage.h"
+#include "../Config/MainConfig.h"
 
 const Maths::Vector4f FrameImage::kGray{0.75f, 0.75f, 0.75f};
 
@@ -12,8 +13,10 @@ FrameImage::FrameImage(int w, int h)
             z_buffer[i][j] = FLOAT_MAX;
         }
     }
-    frame_sample_buffer.resize(width * height * MSAA_rate);
-    z_sample_buffer.resize(width * height * MSAA_rate, FLOAT_MAX);
+    if (IsMSAA) {
+        frame_sample_buffer.resize(width * height * MSAA_rate);
+        z_sample_buffer.resize(width * height * MSAA_rate, FLOAT_MAX);
+    }
 }
 
 FrameImage::~FrameImage() {
@@ -28,10 +31,12 @@ void FrameImage::Resize(int new_width, int new_height) {
     //记录调整前的数据
     std::vector<Maths::Vector3f> old_frame_sample_buffer(frame_sample_buffer);
     std::vector<float> old_z_sample_buffer(z_sample_buffer);
-    //resize MSAA采样数组
-    frame_sample_buffer.resize(new_width * new_height * MSAA_rate);
-    z_sample_buffer.resize(new_height * new_width * MSAA_rate);
-    std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
+    if (IsMSAA) {
+        //resize MSAA采样数组
+        frame_sample_buffer.resize(new_width * new_height * MSAA_rate);
+        z_sample_buffer.resize(new_height * new_width * MSAA_rate);
+        std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
+    }
 
     //宽高resize
     //创建一个新的二维数组
@@ -48,26 +53,26 @@ void FrameImage::Resize(int new_width, int new_height) {
     int col_start = std::abs(new_width - width) / 2;
     int row_max = std::min(new_height, height) + row_start;
     int col_max = std::min(new_width, width) + col_start;
-
-    for (int i = row_start; i < row_max; ++i) {
-        for (int j = col_start; j < col_max; ++j) {
-            if (new_width <= width) {
-                if (new_height <= height)
-                    frame_sample_buffer[(i - row_start) * new_width + j - col_start] = old_frame_sample_buffer[
-                            i * new_width + j]; // 1
-                else
-                    frame_sample_buffer[i * new_width + j - col_start] = old_frame_sample_buffer[
-                            (i - row_start) * new_width + j]; // 2
-            } else {
-                if (new_height <= height)
-                    frame_sample_buffer[(i - row_start) * new_width + j] = old_frame_sample_buffer[i * new_width + j -
-                                                                                                   col_start]; // 3
-                else
-                    frame_sample_buffer[i * new_width + j] = old_frame_sample_buffer[(i - row_start) * new_width + j -
-                                                                                     col_start]; // 4
+    if (IsMSAA)
+        for (int i = row_start; i < row_max; ++i) {
+            for (int j = col_start; j < col_max; ++j) {
+                if (new_width <= width) {
+                    if (new_height <= height)
+                        frame_sample_buffer[(i - row_start) * new_width + j - col_start] = old_frame_sample_buffer[
+                                i * new_width + j]; // 1
+                    else
+                        frame_sample_buffer[i * new_width + j - col_start] = old_frame_sample_buffer[
+                                (i - row_start) * new_width + j]; // 2
+                } else {
+                    if (new_height <= height)
+                        frame_sample_buffer[(i - row_start) * new_width + j] = old_frame_sample_buffer[i * new_width + j -
+                                                                                                       col_start]; // 3
+                    else
+                        frame_sample_buffer[i * new_width + j] = old_frame_sample_buffer[(i - row_start) * new_width + j -
+                                                                                         col_start]; // 4
+                }
             }
         }
-    }
     for (int i = row_start; i < row_max; ++i) {
         for (int j = col_start; j < col_max; ++j) {
             if (new_width <= width) {
@@ -103,8 +108,10 @@ void FrameImage::ClearBuffer(const Maths::Vector4f &color) {
             z_buffer[y][x] = FLOAT_MAX;
         }
     }
-    std::fill(frame_sample_buffer.begin(), frame_sample_buffer.end(), color.head3());
-    std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
+    if (IsMSAA) {
+        std::fill(frame_sample_buffer.begin(), frame_sample_buffer.end(), color.head3());
+        std::fill(z_sample_buffer.begin(), z_sample_buffer.end(), FLOAT_MAX);
+    }
 }
 
 uint32_t *&FrameImage::GetFrameBuffer() {

@@ -6,18 +6,30 @@
 #include "../math/Vector.h"
 #include "RenderUtil.h"
 #include "Triangle.h"
-
+#include "ObjLoader.h"
 #define FLOAT_MAX 3.402823E38
-extern Maths::Vector3f LightDirection_;
+
+struct Light {
+
+    Light(Maths::Vector3f &p, Maths::Vector3f &i) {
+        position = p;
+        intensity = i;
+    }
+
+    Maths::Vector3f position{};
+    Maths::Vector3f intensity{};
+};
+
+extern std::vector<Light> lights_;
 
 class ShadowMapping {
 private:
 public:
-    ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity);
+    ShadowMapping(std::vector<Light> ls, int w, int h);
 
     ~ShadowMapping();
 
-    void UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList);
+    void UpdateShadowMappingDepth(const ObjList &obj_list);
 
     void InitZBuffer();
 
@@ -48,6 +60,7 @@ public:
     int width = 800;
     int height = 600;
     float **z_buffer; //帧图片深度信息缓存
+    void UpdateTrianglesDepth(const std::vector<Triangle *> &triganleList);
 };
 
 

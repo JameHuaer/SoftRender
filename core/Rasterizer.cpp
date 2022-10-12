@@ -1,49 +1,27 @@
-//
-// Created by goksu on 4/6/19.
-//
 
 #include "Rasterizer.h"
 #include "RenderUtil.h"
 #include <algorithm>
 #include <fstream>
 #include <math.h>
+#include <time.h>
 #include <vector>
 
 using namespace rst;
 // std::ofstream outFile("./Debug.txt");
 
-Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new FrameImage(w, h)), camera_(new Camera()) {
+Rasterizer::Rasterizer(int w, int h)
+        : width(w), height(h), frame_image_(new FrameImage(w, h)), camera_(new Camera()) {
     win32_platform_ = new PlatForms::Win32Platform(camera_);
     //加载模型
     std::string obj_path = R"(../models/spot_triangulated_good.obj)";
     //  std::string obj_path = R"(../models/Baby Zebra.obj)";
     //  std::string obj_path = R"(../models\AnyConv.com__Bee.obj)";
-    //  std::string obj_path = R"(../models\cube.obj)";
+    //    std::string obj_path = R"(../models\cube.obj)";
     std::string texture_path = R"(../models/spot_texture.bmp)";
     // std::string texture_path = R"(../models/hmap.bmp)";
-
-    // floor 注意：三角形顺序该项目是逆时针索引，不然会着色在背面。
-    float floorScale = 4.0f;
-    Maths::Vector3f verts[4] = {{-1 * floorScale, -1, -1 * floorScale},
-                                {1 * floorScale,  -1, -1 * floorScale},
-                                {1 * floorScale,  -1, 1 * floorScale},
-                                {-1 * floorScale, -1, 1 * floorScale}}; //顶点
-    uint32_t vertIndex[6] = {0, 3, 2, 0, 2,
-                             1};                                                                                                                                              //三角形索引
-    Maths::Vector2f st[4] = {{0, 1},
-                             {1, 1},
-                             {1, 0},
-                             {0, 0}};                                                                                                                                //
-    for (int i = 0; i < 2; ++i) {
-        Triangle *triangleFloor = new Triangle();
-        for (int j = 0; j < 3; j++) {
-            triangleFloor->setVertex(j, Maths::ToVector4f(verts[vertIndex[i * 3 + j]], 1.0f));
-            triangleFloor->setNormal(j, Maths::Vector3f(0, 1, 0));
-            triangleFloor->setTexCoord(j, st[vertIndex[i * 3 + j]]);
-        }
-        triangle_list_.push_back(triangleFloor);
-    }
-
+    //添加地面
+    InitFloor();
     //将obj数据存放在triangle中.
     ObjLoader obj_load;
     obj_load.LoadFile(obj_path);
@@ -55,7 +33,7 @@ Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new Fra
             t->setNormal(j, obj_load.obj_data_.norms[obj_load.obj_data_.facet_nrm[i + j]]);
             t->setTexCoord(j, obj_load.obj_data_.tex_coord[obj_load.obj_data_.facet_tex[i + j]]);
         }
-        triangle_list_.push_back(t);
+        obj_list_.main_obj_.push_back(t);
     }
     //加载纹理贴图
     SetTexture(Texture2D(texture_path));
@@ -64,47 +42,62 @@ Rasterizer::Rasterizer(int w, int h) : width(w), height(h), frame_image_(new Fra
     //初始化shadowMapping
     Maths::Vector3f lightPosition = {-20, 20, 0};
     Maths::Vector3f lightIntensity = {500, 500, 500};
-    shadowMapping_ = new ShadowMapping(lightPosition, lightIntensity);
+    shadowMapping_ = new ShadowMapping({{lightPosition, lightIntensity}}, w, h);
     win32_platform_->SetShadowMapping(shadowMapping_);
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
     fill_mode = kSolide;
-    IsUseMSAA = false;
+    IsMSAA = false;
+    f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
+    f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
 }
 
 void Rasterizer::Update() {
-    frame_image_->ClearBuffer(Maths::Vector4f{0.6, 0.6, 0.6}); //设置背景色
+    //    float startTime, endTime;
+    //    startTime = clock();
+    frame_image_->ClearBuffer(background_color_); //设置背景色
     SetModel(camera_->GetModelMatrix());
     SetView(camera_->GetViewMatrix());
     SetProjection(camera_->GetProjectionMatrix());
     // shadow mapping 更新
-//    shadowMapping_->rotate_angle_.y += 0.01f;
     shadowMapping_->ClearZBuffer();
     shadowMapping_->UpdateMVPMatrix();
-    shadowMapping_->UpdateShadowMappingDepth(triangle_list_);
+    shadowMapping_->UpdateShadowMappingDepth(obj_list_);
+    //    endTime = clock();
+    //    std::cout << "update time: " << (endTime - startTime) / CLOCKS_PER_SEC << "s" << std::endl;
 }
 
 void Rasterizer::Render() {
+    float startTime, endTime;
+    startTime = clock();
     Draw();
+    endTime = clock();
+    float renderTime = (endTime - startTime) / CLOCKS_PER_SEC;
+    std::cout << "render time: " << renderTime << "s" << "  fps: " << 1 / renderTime << std::endl;
 }
 
 void Rasterizer::Draw() {
+    DrawObj(obj_list_.floor_, true);
+    DrawObj(obj_list_.main_obj_, false);
+}
 
-    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
-    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
-
+void Rasterizer::DrawObj(const std::vector<Triangle *> &triangle_list, bool isFloor) {
     Maths::Matrix4f mvp = projection * view * model;
+    Maths::Matrix4f mv = view * model;
+    //法线
+    Maths::Matrix4f inv_trans = mv.Invert().Transpose();
+    invMvp = mvp.Invert();
     std::vector<Triangle> clip_triangle;
 
-    for (const auto &t: triangle_list_) {
+    for (const auto &t: triangle_list) {
         Triangle newtri = *t;
 
         //计算视口矩阵
         std::array<Maths::Vector4f, 3> mm{
-                (view * model * t->v[0]),
-                (view * model * t->v[1]),
-                (view * model * t->v[2])};
+                (mv * t->v[0]),
+                (mv * t->v[1]),
+                (mv * t->v[2])};
         //保存视口坐标
         std::array<Maths::Vector3f, 3> viewspace_pos{};
         viewspace_pos[0] = mm[0].head3();
@@ -141,8 +134,6 @@ void Rasterizer::Draw() {
 
         for (auto &triangle: clip_triangle) {
 
-            //法线
-            Maths::Matrix4f inv_trans = (view * model).Invert().Transpose();
             Maths::Vector4f n[] = {
                     inv_trans * Maths::ToVector4f(triangle.normal[0], 0.0f),
                     inv_trans * Maths::ToVector4f(triangle.normal[1], 0.0f),
@@ -167,10 +158,17 @@ void Rasterizer::Draw() {
                     DrawLine(triangle.v[1].head3(), triangle.v[2].head3());
                     break;
                 case kSolide:
-                    if (IsUseMSAA)
-                        RasterizeTriangleMSAA(triangle, viewspace_pos);
-                    else
-                        RasterizeTriangle(triangle, viewspace_pos);
+                    if (IsMSAA) {
+                        if (isFloor)
+                            RasterizeFloor(triangle, viewspace_pos);
+                        else
+                            RasterizeTriangleMSAA(triangle, viewspace_pos);
+                    } else {
+                        if (isFloor)
+                            RasterizeFloor(triangle, viewspace_pos);
+                        else
+                            RasterizeTriangle(triangle, viewspace_pos);
+                    }
                     break;
                 default:
                     break;
@@ -199,43 +197,77 @@ void Rasterizer::RasterizeTriangle(const Triangle &t, const std::array<Maths::Ve
         for (int y = bmin; y < tmax; ++y) {
             int id = frame_image_->GetIndex(x, y);
             //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
-            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
-                continue;
+            //            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
+            //                continue;
             if (MathUtil::InsideTriangle(x, y, t.v)) {
                 std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5f, y + 0.5f, t.v);
                 float w_reciprocal = 1.0f / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
                 float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
                 z_interpolated *= w_reciprocal;
                 if (z_interpolated < frame_image_->GetDepth(x, y)) {
-                    auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1],
-                                                                    t.color[2], 1);                    //颜色插值
-                    auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1],
-                                                                     t.normal[2], 1);                //法向量插值
-                    auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0],
-                                                                        t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
-                    auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0],
-                                                                            view_pos[1], view_pos[2],
-                                                                            1);         //着色点坐标插值
+                    auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);                    //颜色插值
+                    auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);                //法向量插值
+                    auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1); //纹理坐标插值
+                    auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);         //着色点坐标插值
 
-                    FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(),
-                                                  interpolater_texcoords, texture ? &*texture : nullptr);
+                    FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(), interpolater_texcoords, texture ? &*texture : nullptr);
                     payload.view_pos = interpolater_shadingcoords;
                     frame_image_->SetDepth(x, y, z_interpolated);
                     //摄像机屏幕坐标转世界坐标
-                    float f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
-                    float f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
                     Maths::Vector3f pixelPos = {(float) x, (float) y, z_interpolated};
-                    Maths::Vector3f tempPos = {pixelPos.x * 2 / (float) width - 1, pixelPos.y * 2 / (float) height - 1,
-                                               (pixelPos.z - f2) / f1};
+                    Maths::Vector3f tempPos = {pixelPos.x * 2 / (float) width - 1, pixelPos.y * 2 / (float) height - 1, (pixelPos.z - f2) / f1};
                     float interpW = alpha * v[0].w + beta * v[1].w + gamma * v[2].w;
-                    tempPos.x *= interpW;
-                    tempPos.y *= interpW;
-                    tempPos.z *= interpW;
+                    tempPos = tempPos * interpW;
                     Maths::Vector4f homoCoor = Maths::ToVector4f(tempPos, interpW);
-                    Maths::Matrix4f mvpInvert = (projection * view * model).Invert();
-                    Maths::Vector4f worldPos = mvpInvert * homoCoor;
+                    Maths::Vector4f worldPos = invMvp * homoCoor;
                     bool isInLight = shadowMapping_->IsInLight(worldPos, interpolater_normal);
+
                     frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(fragment_shader(payload))
+                                                                   : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
+                }
+            }
+        }
+    }
+}
+
+void Rasterizer::RasterizeFloor(const Triangle &t, const std::array<Maths::Vector3f, 3> &view_pos) {
+
+    auto v = t.toVector4(); //所有顶点的w值都设为1
+    float lmin = INT_MAX, rmax = INT_MIN, bmin = INT_MAX, tmax = INT_MIN, alpha, beta, gamma;
+    for (const auto &k: v) {
+        lmin = (std::min)(lmin, k.x);
+        rmax = (std::max)(rmax, k.x);
+        bmin = (std::min)(bmin, k.y);
+        tmax = (std::max)(tmax, k.y);
+    }
+    lmin = std::floor(lmin);
+    rmax = std::ceil(rmax);
+    bmin = std::floor(bmin);
+    tmax = std::ceil(tmax);
+    for (int x = lmin; x < rmax; ++x) {
+        for (int y = bmin; y < tmax; ++y) {
+            int id = frame_image_->GetIndex(x, y);
+            //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
+            //            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
+            //                continue;
+            if (MathUtil::InsideTriangle(x, y, t.v)) {
+                std::tie(alpha, beta, gamma) = MathUtil::ComputeBarycentric2D(x + 0.5f, y + 0.5f, t.v);
+                float w_reciprocal = 1.0f;
+                float z_interpolated = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
+                z_interpolated *= w_reciprocal;
+                if (z_interpolated < frame_image_->GetDepth(x, y)) {
+                    Maths::Vector3f interpolater_normal{0, 1, 0}; //法向量
+
+                    frame_image_->SetDepth(x, y, z_interpolated);
+                    //摄像机屏幕坐标转世界坐标
+                    Maths::Vector3f pixelPos = {(float) x, (float) y, z_interpolated};
+                    Maths::Vector3f tempPos = {pixelPos.x * 2 / (float) width - 1, pixelPos.y * 2 / (float) height - 1, (pixelPos.z - f2) / f1};
+                    tempPos = tempPos * w_reciprocal;
+                    Maths::Vector4f homoCoor = Maths::ToVector4f(tempPos, w_reciprocal);
+                    Maths::Vector4f worldPos = invMvp * homoCoor;
+                    bool isInLight = shadowMapping_->IsInLight(worldPos, interpolater_normal);
+
+                    frame_image_->GetFrameBuffer()[id] = isInLight ? MathUtil::RGBToUint(floor_color_)
                                                                    : MathUtil::RGBToUint(Maths::Vector3f(0.0f, 0.0f, 0.0f));
                 }
             }
@@ -267,8 +299,8 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
 
             float delta_msaa_rate = 1.0f / sqrt(frame_image_->MSAA_rate);
             //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
-            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
-                continue;
+            //            if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
+            //                continue;
             id *= frame_image_->MSAA_rate;
 
             for (float inner_x = delta_msaa_rate / 2.0f; inner_x < 1; inner_x += delta_msaa_rate) {
@@ -285,16 +317,16 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
                         z_interpolated *= w_reciprocal;
                         if (z_interpolated < frame_image_->z_sample_buffer[id + sample_k]) {
                             auto interpolater_color = MathUtil::Interpolate(alpha, beta, gamma, t.color[0], t.color[1],
-                                                                            t.color[2], 1);                    //颜色插值
+                                                                            t.color[2], 1); //颜色插值
                             auto interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, t.normal[0],
                                                                              t.normal[1], t.normal[2],
-                                                                             1);                //法向量插值
+                                                                             1); //法向量插值
                             auto interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, t.tex_coords[0],
                                                                                 t.tex_coords[1], t.tex_coords[2],
                                                                                 1); //纹理坐标插值
                             auto interpolater_shadingcoords = MathUtil::Interpolate(alpha, beta, gamma, view_pos[0],
                                                                                     view_pos[1], view_pos[2],
-                                                                                    1);         //着色点坐标插值
+                                                                                    1); //着色点坐标插值
 
                             FragmentShaderPayload payload(interpolater_color, interpolater_normal.normalize(),
                                                           interpolater_texcoords, texture ? &*texture : nullptr);
@@ -302,7 +334,7 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
                             frame_image_->z_sample_buffer[id + sample_k] = z_interpolated;
                             frame_image_->frame_sample_buffer[id + sample_k] = fragment_shader(payload) / 4;
                         }
-                        min_depth = std::min(min_depth, z_interpolated); //记录最小深度
+                        min_depth = std::fmin(min_depth, z_interpolated); //记录最小深度
                     }
                 }
             }
@@ -310,7 +342,7 @@ void Rasterizer::RasterizeTriangleMSAA(const Triangle &t, const std::array<Maths
             for (int i = 0; i < frame_image_->MSAA_rate; ++i) {
                 color = color + frame_image_->frame_sample_buffer[id + i];
             }
-            frame_image_->SetDepth(x, y, std::min(frame_image_->GetDepth(x, y), min_depth));
+            frame_image_->SetDepth(x, y, std::fmin(frame_image_->GetDepth(x, y), min_depth));
             frame_image_->GetFrameBuffer()[frame_image_->GetIndex(x, y)] = MathUtil::RGBToUint(color);
         }
     }
@@ -340,7 +372,7 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     int error2 = 0;
     int y = y0;
     for (int x = x0; x <= x1; x++) {
-        if (steep)// [0,width-1],[0,height-1]
+        if (steep) // [0,width-1],[0,height-1]
             frame_image_->DrawPixel(y == width ? width - 1 : y, (height - x) == height ? height - 1 : (height - x), MathUtil::RGBToUint(line_color));
         else
             frame_image_->DrawPixel(x == width ? width - 1 : x, (height - y) == height ? height - 1 : (height - y), MathUtil::RGBToUint(line_color));
@@ -538,7 +570,7 @@ void Rasterizer::LerpAndPushVertex(const Triangle &tri, const Maths::Vector3f &v
     interpolater_vertex.x = v.x;
     interpolater_vertex.y = v.y;
     Maths::Vector3f interpolater_normal = MathUtil::Interpolate(alpha, beta, gamma, tri.normal[0], tri.normal[1],
-                                                                tri.normal[2], 1);                //法向量插值
+                                                                tri.normal[2], 1); //法向量插值
     Maths::Vector2f interpolater_texcoords = MathUtil::Interpolate(alpha, beta, gamma, tri.tex_coords[0],
                                                                    tri.tex_coords[1], tri.tex_coords[2], 1); //纹理坐标插值
     res.push_back(VertexData{interpolater_vertex, interpolater_normal, interpolater_texcoords});
@@ -575,4 +607,28 @@ void Rasterizer::SetTexture(Texture2D tex) {
 
 uint32_t *&Rasterizer::GetFrameBuffer() {
     return frame_image_->GetFrameBuffer();
+}
+
+void Rasterizer::InitFloor() {
+    // floor 注意：三角形顺序该项目是逆时针索引，不然会着色在背面。
+    float floorScale = 2.5f;
+    Maths::Vector3f verts[4] = {{-1 * floorScale, -1, -1 * floorScale},
+                                {1 * floorScale,  -1, -1 * floorScale},
+                                {1 * floorScale,  -1, 1 * floorScale},
+                                {-1 * floorScale, -1, 1 * floorScale}}; //顶点
+    uint32_t vertIndex[6] = {0, 3, 2, 0, 2,
+                             1}; //三角形索引
+    Maths::Vector2f st[4] = {{0, 1},
+                             {1, 1},
+                             {1, 0},
+                             {0, 0}}; //
+    for (int i = 0; i < 2; ++i) {
+        Triangle *triangleFloor = new Triangle();
+        for (int j = 0; j < 3; j++) {
+            triangleFloor->setVertex(j, Maths::ToVector4f(verts[vertIndex[i * 3 + j]], 1.0f));
+            triangleFloor->setNormal(j, Maths::Vector3f(0, 1, 0));
+            triangleFloor->setTexCoord(j, st[vertIndex[i * 3 + j]]);
+        }
+        obj_list_.floor_.push_back(triangleFloor);
+    }
 }

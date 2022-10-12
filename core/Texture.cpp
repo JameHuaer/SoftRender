@@ -1,16 +1,14 @@
 #include "Texture.h"
+
 Texture2D::Texture2D(const std::string &file_name) {
     //读取图像文件
     std::ifstream fp(file_name, std::ios::binary); //读入的文件
-    if (!fp) {
-        std::cout << "file open error!\n";
-        exit(0);
-    }
+    assert(fp);
     long width, height;
     TagBitMapFileHeadr fileHead;                               //位图文件头
-    fp.read((char *)(&fileHead), sizeof(TagBitMapFileHeadr));  //从fp中读取TagBitMapFileHeadr信息到fileHead中,同时fp的指针移动
+    fp.read((char *) (&fileHead), sizeof(TagBitMapFileHeadr));  //从fp中读取TagBitMapFileHeadr信息到fileHead中,同时fp的指针移动
     TagBitMapInfoHeader infoHead;                              //位图信息头
-    fp.read((char *)(&infoHead), sizeof(TagBitMapInfoHeader)); //从fp中读取TagBitMapInfoHeader信息到infoHead中,同时fp的指针移动
+    fp.read((char *) (&infoHead), sizeof(TagBitMapInfoHeader)); //从fp中读取TagBitMapInfoHeader信息到infoHead中,同时fp的指针移动
     width = infoHead.biWidth;
     height = infoHead.biHeight;
 
@@ -38,14 +36,15 @@ Texture2D::Texture2D(const std::string &file_name) {
 }
 
 Texture2D::Texture2D(int w, int h)
-    : width_(w), height_(h) {
+        : width_(w), height_(h) {
     texture_buffer_ = new Maths::Vector4f *[width_];
     for (int i = 0; i < height_; ++i) {
         texture_buffer_[i] = new Maths::Vector4f[height_];
     }
 }
+
 Texture2D::Texture2D(const Texture2D &t)
-    : width_(t.width_), height_(t.height_) {
+        : width_(t.width_), height_(t.height_) {
 
     texture_buffer_ = new Maths::Vector4f *[width_];
     for (int i = 0; i < width_; ++i) {
@@ -80,6 +79,7 @@ Maths::Vector4f Texture2D::Sample(const Maths::Vector2f tex) {
         return texture_buffer_[u_index][v_index];
     }
 }
+
 Maths::Vector4f Texture2D::GetColor(float u, float v) {
 
     uint32_t u_img = u * width_;
@@ -103,11 +103,11 @@ Maths::Vector3f Texture2D::GetColorBilinear(float u, float v) {
     float u_img = u * width_;
     float v_img = v * height_;
     //防止访问图片数组越界
-    int u_min = std::min((float)width_ - 1, std::floor(u_img)); 
-    int u_max = std::min((float)width_-1, std::ceil(u_img));
+    int u_min = std::min((float) width_ - 1, std::floor(u_img));
+    int u_max = std::min((float) width_ - 1, std::ceil(u_img));
 
-    int v_min = std::min((float)height_ - 1, std::floor(v_img));
-    int v_max = std::min((float)height_-1, std::ceil(v_img));
+    int v_min = std::min((float) height_ - 1, std::floor(v_img));
+    int v_max = std::min((float) height_ - 1, std::ceil(v_img));
 
     Maths::Vector4f Q11 = texture_buffer_[u_min][v_max];
     Maths::Vector4f Q12 = texture_buffer_[u_max][v_max];

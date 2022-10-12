@@ -1,9 +1,12 @@
 #include "ShadowMapping.h"
 
-Maths::Vector3f LightDirection_{-20, 20, 0};
+#include <utility>
 
-ShadowMapping::ShadowMapping(Maths::Vector3f position, Maths::Vector3f intensity) : rotate_angle_(0, 0, 0) {
-    LightDirection_ = position;
+
+std::vector<Light> lights_;
+
+ShadowMapping::ShadowMapping(std::vector<Light> ls, int w, int h) : rotate_angle_(0, 0, 0), width(w), height(h) {
+    lights_ = std::move(ls);
     //model
     model_ = Maths::Matrix4f::Identity();
 
@@ -49,6 +52,7 @@ void ShadowMapping::InitZBuffer() {
     }
 }
 
+//shadow mapping 可以不用resize
 void ShadowMapping::Resize(int newWight, int newHeight) {
     //宽高resize
     //创建一个新的二维数组
@@ -106,38 +110,42 @@ void ShadowMapping::SetDepth(int x, int y, float z) {
 
 int ShadowMapping::GetIndex(int x, int y) {
     return (height - y - 1) * width + x - 1;
-    // return width * y + x;
 }
 
 bool ShadowMapping::IsInLight(const Maths::Vector4f &worldPos, const Maths::Vector3f &Normal) {
     float f1 = (z_far - z_near) / 2.0f; // 24.95
     float f2 = (z_far + z_near) / 2.0f; // 25.05
-    Maths::Vector2f result;
-    Maths::Vector4f tempWorldPos = worldPos;
-    Maths::Vector4f tempPos = mvp_ * tempWorldPos;
-    tempPos.x /= tempPos.w;
-    tempPos.y /= tempPos.w;
-    tempPos.z /= tempPos.w;
+    Maths::Vector4f tempPos = mvp_ * worldPos;
+    float invW = 1 / tempPos.w;
+    tempPos.x *= invW;
+    tempPos.y *= invW;
+    tempPos.z *= invW;
     tempPos.x = 0.5f * width * (tempPos.x + 1.0);
     tempPos.y = 0.5f * height * (tempPos.y + 1.0);
     tempPos.z = tempPos.z * f1 + f2;
     float lightDepth = GetDepth(tempPos.x, tempPos.y);
-    float bias = std::fmax(0.05f * (1.0f - Normal.Dot(LightDirection_)), 0.001f);
+    float bias = std::fmax(0.05f * (1.0f - Normal.Dot(lights_[0].position)), 0.001f);
     return tempPos.z <= lightDepth + bias;
 }
 
-void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &triganleList) {
+void ShadowMapping::UpdateShadowMappingDepth(const ObjList &obj_list) {
+    UpdateTrianglesDepth(obj_list.floor_);
+    UpdateTrianglesDepth(obj_list.main_obj_);
+}
+
+void ShadowMapping::UpdateTrianglesDepth(const std::vector<Triangle *> &triganleList) {
     float f1 = (z_far - z_near) / 2.0f; // 24.95
     float f2 = (z_far + z_near) / 2.0f; // 25.05
     Maths::Matrix4f mvp = mvp_;;
+    Maths::Matrix4f mv = view_ * model_;;
     for (const auto &t: triganleList) {
         Triangle newtri = *t;
 
         //计算视口矩阵
         std::array<Maths::Vector4f, 3> mm{
-                (view_ * model_ * t->v[0]),
-                (view_ * model_ * t->v[1]),
-                (view_ * model_ * t->v[2])};
+                (mv * t->v[0]),
+                (mv * t->v[1]),
+                (mv * t->v[2])};
         //保存视口坐标
         std::array<Maths::Vector3f, 3> viewspace_pos{};
         viewspace_pos[0] = mm[0].head3();
@@ -178,7 +186,7 @@ void ShadowMapping::UpdateShadowMappingDepth(const std::vector<Triangle *> &trig
         for (int x = lmin; x < rmax; ++x) {
             for (int y = bmin; y < tmax; ++y) {
                 int id = GetIndex(x, y);
-                //上下左右越界的不进行着色，缩放超出屏幕也不进行着色，在进行多边形裁剪后，该语句没有必要
+                //上下左右越界的不进行计算
                 if (id < 0 || id > width * height || x >= width || x < 0 || y >= height || y < 0)
                     continue;
                 if (MathUtil::InsideTriangle(x, y, newtri.v)) {
@@ -213,8 +221,8 @@ void ShadowMapping::UpdateMVPMatrix() {
                  {0, 0, 0, 1}}};
     Maths::Matrix4f rotate = (rotation_x * rotation_y);
     // view
-    LightDirection_ = (rotate * ToVector4f(LightDirection_, 1)).head3();
-    view_ = LookAt(LightDirection_, Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
+    lights_[0].position = (rotate * ToVector4f(lights_[0].position, 1)).head3();
+    view_ = LookAt(lights_[0].position, Maths::Vector3f{0, 0, 0}, Maths::Vector3f{0, 1, 0});
 
     // mvp
     mvp_ = projection_ * view_ * model_;
