@@ -69,6 +69,29 @@ void Win32Platform::OnKeyBoardDown(WPARAM btn_state, bool isPressed, HWND hWnd) 
             shadowMapping_->rotate_angle_.x = 0;
             shadowMapping_->rotate_angle_.y = 0;
             break;
+        case VK_F1:
+            texture = normalTexture;
+            fragment_shader = NormalFragmentShader;
+            break;
+        case VK_F2:
+            texture = normalTexture;
+            fragment_shader = TextureFragmentShader;
+            break;
+        case VK_F3:
+            texture = normalTexture;
+            fragment_shader = PhongFragmentShader;
+            break;
+        case VK_F4:
+            texture = bumpTexture;
+            fragment_shader = DisplacementFragmentShader;
+            break;
+        case VK_F5:
+            texture = bumpTexture;
+            fragment_shader = BumpFragmentShader;
+            break;
+        case VK_F6:
+            fillMode = fillMode == ModelFillMode::kSolide ? ModelFillMode::kWireFrame : ModelFillMode::kSolide;
+            break;
         default:
             break;
     }
@@ -79,3 +102,4 @@ void Win32Platform::OnKeyBoardDown(WPARAM btn_state, bool isPressed, HWND hWnd) 
 void Win32Platform::SetShadowMapping(ShadowMapping *sm) {
     shadowMapping_ = sm;
 }
+

@@ -19,11 +19,6 @@
 
 namespace rst {
 
-//模型填充模式
-    enum ModelFillMode {
-        kWireFrame, //线框模式
-        kSolide
-    };
 //多边形裁剪，判断与点在立方体哪里
     enum ClipOutCode {
         kInside = 0,
@@ -98,7 +93,11 @@ namespace rst {
         int width, height;
         PlatForms::Win32Platform *win32_platform_;
         ModelFillMode fill_mode; //填充模式
-
+        std::function<Maths::Vector3f(FragmentShaderPayload)> fragment_shader;
+        std::function<Maths::Vector3f(VertexShaderPayload)> vertex_shader;
+        std::optional<Texture2D> texture;
+        std::optional<Texture2D> normalTexture;
+        std::optional<Texture2D> bumpTexture;
     private:
         void InitFloor();
 
@@ -123,11 +122,9 @@ namespace rst {
         Maths::Matrix4f invMvp;
         float f1;
         float f2;
-        std::optional<Texture2D> texture;
         const Maths::Vector4f background_color_{0.6, 0.6, 0.6};
         const Maths::Vector4f floor_color_{0.4, 0.4, 0.4};
-        std::function<Maths::Vector3f(FragmentShaderPayload)> fragment_shader;
-        std::function<Maths::Vector3f(VertexShaderPayload)> vertex_shader;
+
 
         void DrawObj(const std::vector<Triangle *> &triangle_list, bool isFloor);
 

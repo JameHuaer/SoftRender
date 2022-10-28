@@ -3,8 +3,8 @@
 #include "RenderUtil.h"
 #include <algorithm>
 #include <fstream>
-#include <math.h>
-#include <time.h>
+#include <cmath>
+#include <ctime>
 #include <vector>
 
 using namespace rst;
@@ -12,14 +12,13 @@ using namespace rst;
 
 Rasterizer::Rasterizer(int w, int h)
         : width(w), height(h), frame_image_(new FrameImage(w, h)), camera_(new Camera()) {
-    win32_platform_ = new PlatForms::Win32Platform(camera_);
     //加载模型
     std::string obj_path = R"(../models/spot_triangulated_good.obj)";
     //  std::string obj_path = R"(../models/Baby Zebra.obj)";
     //  std::string obj_path = R"(../models\AnyConv.com__Bee.obj)";
     //    std::string obj_path = R"(../models\cube.obj)";
     std::string texture_path = R"(../models/spot_texture.bmp)";
-    // std::string texture_path = R"(../models/hmap.bmp)";
+    std::string bump_texture_path = R"(../models/hmap.bmp)";
     //添加地面
     InitFloor();
     //将obj数据存放在triangle中.
@@ -36,19 +35,24 @@ Rasterizer::Rasterizer(int w, int h)
         obj_list_.main_obj_.push_back(t);
     }
     //加载纹理贴图
-    SetTexture(Texture2D(texture_path));
+    normalTexture = Texture2D(texture_path);
+    SetTexture(*normalTexture);
+    bumpTexture = Texture2D(bump_texture_path);
+
     //  设置顶点着色模型和片元着色模型
     SetFragmentShader(TextureFragmentShader);
     //初始化shadowMapping
     Maths::Vector3f lightPosition = {-20, 20, 0};
     Maths::Vector3f lightIntensity = {500, 500, 500};
     shadowMapping_ = new ShadowMapping({{lightPosition, lightIntensity}}, w, h);
+
+    win32_platform_ = new PlatForms::Win32Platform(camera_, fragment_shader, texture, normalTexture, bumpTexture, fill_mode);
     win32_platform_->SetShadowMapping(shadowMapping_);
+
     //设置摄像机参数
     camera_->perspective_arg_ = PerspectiveArg(45.0, 1.0, 0.1, 50);
     //填充模式
     fill_mode = kSolide;
-    IsMSAA = false;
     f1 = (camera_->perspective_arg_.z_far - camera_->perspective_arg_.z_near) / 2.0f; // 24.95
     f2 = (camera_->perspective_arg_.z_far + camera_->perspective_arg_.z_near) / 2.0f; // 25.05
 }
@@ -354,7 +358,7 @@ void Rasterizer::DrawLine(Maths::Vector3f begin, Maths::Vector3f end) {
     float y0 = begin.y;
     float x1 = end.x;
     float y1 = end.y;
-    Maths::Vector3f line_color = {1, 0, 0};
+    Maths::Vector3f line_color = {0, 0, 0};
 
     bool steep = false;
     if (std::abs(x0 - x1) < std::abs(y0 - y1)) {

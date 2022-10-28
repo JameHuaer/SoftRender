@@ -3,9 +3,15 @@
 
 #include "../core/Camera.h"
 #include "../core/ShadowMapping.h"
+#include "../core/Shader.h"
+#include "../core/Global.h"
 #include <memory>
 #include <windows.h>
 
+//enum ModelFillMode {
+//    kWireFrame, //线框模式
+//    kSolide
+//};
 namespace PlatForms {
     class PlatFormsBase {
     public:
@@ -16,11 +22,13 @@ namespace PlatForms {
 
     class Win32Platform : PlatFormsBase {
     public:
-        Win32Platform(Camera *car)
-                : camera(car) {
+        Win32Platform(Camera *car, std::function<Maths::Vector3f(FragmentShaderPayload)> &fs, std::optional<Texture2D> &t, std::optional<Texture2D> &nt,
+                      std::optional<Texture2D> &bt, ModelFillMode &fm)
+                : camera(car), fragment_shader(fs), texture(t), normalTexture(nt), bumpTexture(bt), fillMode(fm) {
         }
 
         void SetShadowMapping(ShadowMapping *sm);
+
 
     public:
         //鼠标按下
@@ -40,9 +48,15 @@ namespace PlatForms {
 
     public:
         ShadowMapping *shadowMapping_;
+
     private:
         POINT last_mouse_position;
         Camera *camera;
+        std::function<Maths::Vector3f(FragmentShaderPayload)> &fragment_shader;
+        std::optional<Texture2D> &texture;
+        std::optional<Texture2D> &normalTexture;
+        std::optional<Texture2D> &bumpTexture;
+        ModelFillMode &fillMode;
     };
 }
 
